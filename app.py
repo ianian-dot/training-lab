@@ -401,14 +401,18 @@ def to_google_sheet_csv_url(sheet_url: str) -> str:
 
 def load_workouts(csv_url: str | None = None) -> pd.DataFrame:
     ensure_data_file()
+    local_df = normalize_workouts(pd.read_csv(WORKOUTS_PATH))
     if csv_url:
         try:
-            return normalize_workouts(read_google_sheet_csv(csv_url))
+            sheet_df = normalize_workouts(read_google_sheet_csv(csv_url))
+            combined = pd.concat([local_df, sheet_df], ignore_index=True)
+            dedupe_columns = ["date", "exercise", "sets", "reps", "weight_kg", "weight_basis", "notes"]
+            return combined.drop_duplicates(subset=dedupe_columns, keep="last").reset_index(drop=True)
         except Exception as exc:
             st.sidebar.error(f"Could not load Google Sheet CSV: {exc}")
             st.sidebar.info("Make sure the sheet is shared as 'Anyone with the link can view' or published to the web.")
 
-    return normalize_workouts(pd.read_csv(WORKOUTS_PATH))
+    return local_df
 
 
 def append_workout(row: dict) -> None:
