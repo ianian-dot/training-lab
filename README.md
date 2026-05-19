@@ -30,12 +30,15 @@ Workout data is stored in `data/workouts.csv`.
 
 The gym-friendly workflow is:
 
-1. Submit one Google Form response per exercise while you are at the gym.
+1. Submit one Google Form response per gym session.
+2. Fill up to 6 exercise blocks as you finish each exercise.
 2. The form writes to a linked Google Sheet.
 3. Paste the sheet CSV export URL into the dashboard sidebar.
 4. The dashboard uses that sheet instead of the local CSV.
 
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
+
+The Google Sheet stores each session as one wide row, but the dashboard converts those exercise blocks into one analysis row per exercise.
 
 ## Muscle target logic
 

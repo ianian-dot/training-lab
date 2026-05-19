@@ -200,6 +200,93 @@ COLUMN_ALIASES = {
 }
 
 
+def canonical_label(value: object) -> str:
+    return str(value).strip().lower()
+
+
+def row_value(row: pd.Series, lookup: dict[str, str], *labels: str) -> object:
+    for label in labels:
+        column = lookup.get(canonical_label(label))
+        if column is not None:
+            return row.get(column)
+    return None
+
+
+def is_filled(value: object) -> bool:
+    if pd.isna(value):
+        return False
+    return str(value).strip() != ""
+
+
+def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
+    lookup = {canonical_label(column): column for column in df.columns}
+    has_multi_exercise_columns = any(canonical_label(f"Exercise {index}") in lookup for index in range(1, 7))
+    if not has_multi_exercise_columns:
+        return df
+
+    rows = []
+    for _, form_row in df.iterrows():
+        session_fields = {
+            "date": row_value(form_row, lookup, "Date", "Workout date"),
+            "start_time": row_value(form_row, lookup, "Start time"),
+            "session_type": row_value(form_row, lookup, "Session", "Session type"),
+            "duration_min": row_value(form_row, lookup, "Duration min", "Duration (min)"),
+            "calories": row_value(form_row, lookup, "Calories"),
+            "avg_heart_rate": row_value(form_row, lookup, "Avg heart rate", "Average heart rate"),
+            "max_heart_rate": row_value(form_row, lookup, "Max heart rate"),
+            "body_weight_kg": row_value(form_row, lookup, "Body weight kg", "Body weight (kg)"),
+            "protein_taken": row_value(form_row, lookup, "Protein taken", "Took protein"),
+            "protein_grams": row_value(form_row, lookup, "Protein grams"),
+            "energy": row_value(form_row, lookup, "Energy"),
+            "motivation": row_value(form_row, lookup, "Motivation"),
+            "session_quality": row_value(form_row, lookup, "Session quality", "Gym session quality"),
+            "productivity": row_value(form_row, lookup, "Productivity"),
+            "sleep_hours": row_value(form_row, lookup, "Sleep hours", "Sleep (hours)"),
+            "feeling": row_value(form_row, lookup, "Feeling", "How I am feeling", "How im feeling"),
+        }
+
+        session_notes = row_value(form_row, lookup, "Session notes", "Notes")
+        for index in range(1, 7):
+            exercise = row_value(form_row, lookup, f"Exercise {index}")
+            other_exercise = row_value(form_row, lookup, f"Other exercise {index}")
+            if is_filled(other_exercise):
+                exercise = other_exercise
+
+            if not is_filled(exercise):
+                continue
+
+            exercise_name = str(exercise).strip()
+            if exercise_name.lower() == "other":
+                continue
+
+            muscle_group = row_value(form_row, lookup, f"Muscle group {index}")
+            if not is_filled(muscle_group):
+                muscle_group = EXERCISES.get(exercise_name, "Full body")
+
+            exercise_notes = row_value(form_row, lookup, f"Exercise notes {index}", f"Notes {index}")
+            notes = " | ".join(
+                str(note).strip()
+                for note in [exercise_notes, session_notes]
+                if is_filled(note)
+            )
+
+            rows.append(
+                {
+                    **session_fields,
+                    "exercise": exercise_name,
+                    "muscle_group": muscle_group,
+                    "sets": row_value(form_row, lookup, f"Sets {index}"),
+                    "reps": row_value(form_row, lookup, f"Reps {index}"),
+                    "weight_kg": row_value(form_row, lookup, f"Weight kg {index}", f"Weight (kg) {index}"),
+                    "weight_basis": row_value(form_row, lookup, f"Weight basis {index}"),
+                    "rpe": row_value(form_row, lookup, f"RPE {index}"),
+                    "notes": notes,
+                }
+            )
+
+    return pd.DataFrame(rows, columns=COLUMNS)
+
+
 def ensure_data_file() -> None:
     DATA_DIR.mkdir(exist_ok=True)
     if WORKOUTS_PATH.exists():
@@ -247,7 +334,7 @@ def estimate_one_rep_max(row: pd.Series) -> float:
 
 
 def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
+    df = expand_multi_exercise_form(df.copy())
     df.columns = [COLUMN_ALIASES.get(str(column).strip().lower(), str(column).strip()) for column in df.columns]
 
     if "other_exercise" in df.columns:
@@ -983,9 +1070,10 @@ def render_setup(csv_url: str | None) -> None:
 
     st.markdown("**Gym logging rule**")
     st.code(
-        "1 form submission = 1 exercise\n"
-        "Required: date, exercise, sets, reps, weight\n"
-        "Optional: RPE, duration, calories, heart rate, protein, body weight, feeling, motivation, session quality, notes",
+        "1 form submission = 1 gym session\n"
+        "Fill up to 6 exercise blocks as you go\n"
+        "Exercise 1 is required; exercises 2-6 are optional\n"
+        "Shared optional details: duration, calories, heart rate, protein, body weight, feeling, motivation, session quality, notes",
         language="text",
     )
 

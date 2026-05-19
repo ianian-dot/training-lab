@@ -1,6 +1,6 @@
 # Google Form Setup
 
-Use `google_form_creator.gs` to create a Google Form and linked Google Sheet.
+Use `google_form_creator.gs` to create a Google Form and linked Google Sheet. The form records one gym session per submission, with up to 6 exercise blocks.
 
 ## Steps
 
@@ -23,4 +23,4 @@ Useful Google Sheets CSV format:
 https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/export?format=csv&gid=SHEET_GID
 ```
 
-The dashboard maps the Google Form column names into its internal workout schema.
+The dashboard maps the Google Form column names into its internal workout schema. For the 6-exercise form, it converts each filled exercise block into a normal per-exercise row before calculating charts.

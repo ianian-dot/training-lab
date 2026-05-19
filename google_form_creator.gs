@@ -31,7 +31,7 @@ function createTrainingLabForm() {
   ];
 
   const form = FormApp.create('Training Lab Workout Log');
-  form.setDescription('Submit one response per exercise. Required fields are intentionally quick for gym use.');
+  form.setDescription('Submit one response per gym session. Fill each exercise block as you finish it. Leave unused blocks blank.');
   form.setCollectEmail(false);
 
   form.addDateItem().setTitle('Date').setRequired(true);
@@ -39,30 +39,46 @@ function createTrainingLabForm() {
 
   form.addListItem()
     .setTitle('Session')
-    .setChoiceValues(['Upper', 'Push', 'Pull', 'Legs', 'Arms', 'Full body', 'Other']);
+    .setChoiceValues(['Upper', 'Push', 'Pull', 'Legs', 'Arms', 'Full body', 'Cardio', 'Other']);
 
-  form.addListItem()
-    .setTitle('Exercise')
-    .setChoiceValues(exercises)
-    .setRequired(true);
+  for (let index = 1; index <= 6; index++) {
+    form.addPageBreakItem().setTitle('Exercise ' + index);
 
-  form.addTextItem().setTitle('Other exercise');
+    form.addListItem()
+      .setTitle('Exercise ' + index)
+      .setChoiceValues(exercises)
+      .setRequired(index === 1);
 
-  form.addListItem()
-    .setTitle('Muscle group')
-    .setChoiceValues(muscleGroups)
-    .setRequired(true);
+    form.addTextItem().setTitle('Other exercise ' + index);
 
-  form.addTextItem().setTitle('Sets').setRequired(true);
-  form.addTextItem().setTitle('Reps').setRequired(true);
-  form.addTextItem().setTitle('Weight kg').setRequired(true);
+    form.addListItem()
+      .setTitle('Muscle group ' + index)
+      .setChoiceValues(muscleGroups);
 
-  form.addListItem()
-    .setTitle('Weight basis')
-    .setChoiceValues(['total', 'per hand', 'per side', 'bodyweight'])
-    .setRequired(true);
+    form.addTextItem()
+      .setTitle('Sets ' + index)
+      .setHelpText('Example: 4 or 3.5')
+      .setRequired(index === 1);
 
-  form.addScaleItem().setTitle('RPE').setBounds(1, 10);
+    form.addTextItem()
+      .setTitle('Reps ' + index)
+      .setHelpText('Use one number for now. Example: 10')
+      .setRequired(index === 1);
+
+    form.addTextItem()
+      .setTitle('Weight kg ' + index)
+      .setHelpText('Use the number you want to track consistently.')
+      .setRequired(index === 1);
+
+    form.addListItem()
+      .setTitle('Weight basis ' + index)
+      .setChoiceValues(['total', 'per hand', 'per side', 'bodyweight']);
+
+    form.addScaleItem().setTitle('RPE ' + index).setBounds(1, 10);
+    form.addParagraphTextItem().setTitle('Exercise notes ' + index);
+  }
+
+  form.addPageBreakItem().setTitle('Session details');
   form.addTextItem().setTitle('Duration min');
   form.addTextItem().setTitle('Calories');
   form.addTextItem().setTitle('Avg heart rate');
@@ -80,7 +96,7 @@ function createTrainingLabForm() {
   form.addScaleItem().setTitle('Productivity').setBounds(1, 10);
   form.addTextItem().setTitle('Sleep hours');
   form.addParagraphTextItem().setTitle('Feeling');
-  form.addParagraphTextItem().setTitle('Notes');
+  form.addParagraphTextItem().setTitle('Session notes');
 
   const sheet = SpreadsheetApp.create('Training Lab Workout Responses');
   form.setDestination(FormApp.DestinationType.SPREADSHEET, sheet.getId());
