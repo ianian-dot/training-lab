@@ -1,0 +1,12 @@
+date,start_time,session_type,exercise,muscle_group,sets,reps,weight_kg,weight_basis,rpe,duration_min,calories,avg_heart_rate,max_heart_rate,body_weight_kg,protein_taken,protein_grams,energy,motivation,session_quality,productivity,sleep_hours,feeling,notes
+2026-05-13,,Pull,Barbell bicep curl,Biceps,4,,15.0,total,,,,,,,,,,,,,,,Original note: Bicep curls 4x 15kg. Reps not recorded.
+2026-05-13,,Push,Single-arm shoulder raise,Shoulders,4,,7.5,per hand,,,,,,,,,,,,,,,Original note: Shoulder raises 4x 7.5kg. Reps not recorded.
+2026-05-13,,Pull,Lat pulldown,Back,4,,25.0,total,,,,,,,,,,,,,,,Original note: Lat pull downs 4x 25kg. Reps not recorded.
+2026-05-13,,Push,Tricep pulldown,Triceps,4,,15.0,total,,,,,,,,,,,,,,,Original note: Tricep pull downs 4x 15kg. Reps not recorded.
+2026-05-14,,Push,Bench press,Chest,3,8,55.0,total,,,,,,,,,,,,,,,Original note: Bench 3x 8 17.5kg each side. Assumes 20kg bar + 17.5kg per side = 55kg total.
+2026-05-14,,Pull,Rear delt machine,Shoulders,4,10,32.0,total,,,,,,,,,,,,,,,Original note: Rear delt 4x 10 32kg.
+2026-05-14,,Legs,Leg extension,Legs,3,12,36.0,total,,,,,,,,,,,,,,,Original note: Leg extensions 3x12 36kg.
+2026-05-18,,Pull,Lat pulldown,Back,4,10,25.0,per side,,,,,,,,,,,,,,,Original note: Lat pull down 25 kg each side 4x 10.
+2026-05-18,,Pull,Incline T-bar row,Back,3.5,20,15.0,total,,,,,,,,,,,,,,,Original note: Inclined back T bar row 15 kg 3.5x 20.
+2026-05-18,,Push,Seated shoulder press,Shoulders,3.5,20,15.0,per side,,,,,,,,,,,,,,,"Original note: Seated shoulder press each side 15kg, 3.5x 20."
+2026-05-18,,Cardio,Cycling,Cardio,1,10,0,bodyweight,,10,139,,,61,Yes,32,,,,,,,Original note: 10 min cycling. 139 kcal. 32g protein Meiji bottle q. Weight: 61kg.
