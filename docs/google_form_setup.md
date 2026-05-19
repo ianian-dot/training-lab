@@ -17,6 +17,11 @@ Use `google_form_creator.gs` to create a Google Form and linked Google Sheet. Th
 
 Once responses exist, publish or export the response sheet as CSV and paste the CSV URL into the dashboard sidebar.
 
+The sheet must be readable by Streamlit. Use one of these options:
+
+- Share the sheet as `Anyone with the link can view`
+- Or use `File > Share > Publish to web`
+
 Useful Google Sheets CSV format:
 
 ```text

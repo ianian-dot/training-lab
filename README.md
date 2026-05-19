@@ -40,6 +40,8 @@ To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed
 
 The Google Sheet stores each session as one wide row, but the dashboard converts those exercise blocks into one analysis row per exercise.
 
+For Streamlit to read the sheet, share it as `Anyone with the link can view` or publish it to the web.
+
 ## Muscle target logic
 
 The app maps each exercise to weighted target muscles. For example:

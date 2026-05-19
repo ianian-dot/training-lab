@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from html import escape
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import streamlit as st
@@ -13,6 +14,10 @@ APP_DIR = Path(__file__).parent
 DATA_DIR = APP_DIR / "data"
 WORKOUTS_PATH = DATA_DIR / "workouts.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
+DEFAULT_GOOGLE_SHEET_URL = (
+    "https://docs.google.com/spreadsheets/d/"
+    "1WBjw_OY7rI-RWbt9BzsxeHJ0xtOTXZqyP1gRqCjQ-4w/edit?gid=998599074#gid=998599074"
+)
 
 EXERCISES = {
     "Bench press": "Chest",
@@ -373,8 +378,25 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=60)
-def read_google_sheet_csv(csv_url: str) -> pd.DataFrame:
-    return pd.read_csv(csv_url)
+def read_google_sheet_csv(sheet_url: str) -> pd.DataFrame:
+    return pd.read_csv(to_google_sheet_csv_url(sheet_url))
+
+
+def to_google_sheet_csv_url(sheet_url: str) -> str:
+    if "export?format=csv" in sheet_url:
+        return sheet_url
+
+    parsed = urlparse(sheet_url)
+    path_parts = [part for part in parsed.path.split("/") if part]
+    try:
+        spreadsheet_id = path_parts[path_parts.index("d") + 1]
+    except (ValueError, IndexError):
+        return sheet_url
+
+    query = parse_qs(parsed.query)
+    fragment_query = parse_qs(parsed.fragment)
+    gid = query.get("gid", fragment_query.get("gid", ["0"]))[0]
+    return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
 
 
 def load_workouts(csv_url: str | None = None) -> pd.DataFrame:
@@ -384,6 +406,7 @@ def load_workouts(csv_url: str | None = None) -> pd.DataFrame:
             return normalize_workouts(read_google_sheet_csv(csv_url))
         except Exception as exc:
             st.sidebar.error(f"Could not load Google Sheet CSV: {exc}")
+            st.sidebar.info("Make sure the sheet is shared as 'Anyone with the link can view' or published to the web.")
 
     return normalize_workouts(pd.read_csv(WORKOUTS_PATH))
 
@@ -1067,6 +1090,7 @@ def render_setup(csv_url: str | None) -> None:
         st.success("Google Sheet CSV is active.")
     else:
         st.info("No Google Sheet CSV URL yet. The app is currently using the local CSV.")
+    st.warning("The response sheet must be shared as 'Anyone with the link can view' or published to the web before Streamlit can read it.")
 
     st.markdown("**Gym logging rule**")
     st.code(
@@ -1095,12 +1119,15 @@ def main() -> None:
     st.caption("Log the lifts you actually do, then watch consistency, volume, and strength trends.")
 
     st.sidebar.header("Data source")
-    google_sheet_csv_url = st.sidebar.text_input(
-        "Google Sheet CSV URL",
-        placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=...",
+    google_sheet_url = st.sidebar.text_input(
+        "Google Sheet URL",
+        value=DEFAULT_GOOGLE_SHEET_URL,
+        placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=...",
     ).strip()
-    csv_url = google_sheet_csv_url or None
+    csv_url = google_sheet_url or None
     st.sidebar.caption(f"Using: {'Google Sheet' if csv_url else 'Local CSV'}")
+    if csv_url:
+        st.sidebar.caption(f"CSV export: {to_google_sheet_csv_url(csv_url)}")
 
     df = load_workouts(csv_url)
     gym_tab, log_tab, progress_tab, muscle_trends_tab, dashboard_tab, setup_tab, data_tab = st.tabs(
