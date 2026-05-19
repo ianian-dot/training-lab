@@ -552,6 +552,70 @@ def render_muscle_target_visual(df: pd.DataFrame) -> None:
     )
 
 
+def render_muscle_trends(df: pd.DataFrame) -> None:
+    st.subheader("Muscle trends")
+
+    targets = build_muscle_target_table(df)
+    if targets.empty:
+        st.info("Log exercises to unlock muscle trend charts.")
+        return
+
+    targets = targets.dropna(subset=["date"])
+    section_options = ["All", *MUSCLE_SECTIONS.keys()]
+    selected_section = st.segmented_control("Group", section_options, default="All")
+
+    available_muscles = sorted(targets["muscle"].dropna().unique())
+    default_muscles = (
+        available_muscles[:8]
+        if selected_section == "All"
+        else [muscle for muscle in MUSCLE_SECTIONS[selected_section] if muscle in available_muscles]
+    )
+
+    selected_muscles = st.multiselect(
+        "Muscles",
+        available_muscles,
+        default=default_muscles,
+        help="Weighted target sets count primary muscles more than secondary helpers.",
+    )
+
+    if not selected_muscles:
+        st.info("Choose at least one muscle.")
+        return
+
+    filtered = targets[targets["muscle"].isin(selected_muscles)].copy()
+    cadence = st.radio("Time bucket", ["Daily", "Weekly"], horizontal=True)
+    freq = "D" if cadence == "Daily" else "W-MON"
+
+    trend = (
+        filtered.set_index("date")
+        .groupby("muscle")["target_sets"]
+        .resample(freq)
+        .sum()
+        .reset_index()
+        .pivot(index="date", columns="muscle", values="target_sets")
+        .fillna(0)
+        .sort_index()
+    )
+
+    rolling_window = 3 if cadence == "Daily" else 2
+    smoothed = trend.rolling(rolling_window, min_periods=1).mean()
+
+    st.markdown("**Weighted target sets over time**")
+    st.line_chart(smoothed, use_container_width=True)
+
+    latest = build_muscle_summary(df)
+    latest = latest[latest["Muscle"].isin(selected_muscles)].sort_values("Target sets, 14d", ascending=False)
+
+    st.markdown("**Current 14-day picture**")
+    st.dataframe(
+        latest[["Muscle", "Days ago", "Target sets, 14d", "Coverage"]].round(
+            {"Target sets, 14d": 1, "Coverage": 2}
+        ),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+
 def render_log_form() -> None:
     st.subheader("Quick log")
     st.caption("Use this between exercises. Log the lift first; add recovery details later if you have them.")
@@ -951,8 +1015,8 @@ def main() -> None:
     st.sidebar.caption(f"Using: {'Google Sheet' if csv_url else 'Local CSV'}")
 
     df = load_workouts(csv_url)
-    gym_tab, log_tab, progress_tab, dashboard_tab, setup_tab, data_tab = st.tabs(
-        ["Gym view", "Log workout", "Progress", "Dashboard", "Setup", "Data"]
+    gym_tab, log_tab, progress_tab, muscle_trends_tab, dashboard_tab, setup_tab, data_tab = st.tabs(
+        ["Gym view", "Log workout", "Progress", "Muscle trends", "Dashboard", "Setup", "Data"]
     )
 
     with gym_tab:
@@ -961,6 +1025,8 @@ def main() -> None:
         render_log_form()
     with progress_tab:
         render_progress(df)
+    with muscle_trends_tab:
+        render_muscle_trends(df)
     with dashboard_tab:
         render_dashboard(df)
     with setup_tab:
