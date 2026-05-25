@@ -1208,6 +1208,34 @@ def render_data(df: pd.DataFrame) -> None:
     st.download_button("Download CSV", WORKOUTS_PATH.read_text(), "workouts.csv", "text/csv")
 
 
+def render_mappings() -> None:
+    st.subheader("Exercise to muscle mapping")
+    st.caption("Weighted target sets use 1.0 for primary muscles and smaller values for secondary muscles.")
+
+    rows = []
+    for exercise, default_group in sorted(EXERCISES.items()):
+        targets = MUSCLE_TARGETS.get(canonical_label(exercise), {default_group: 1.0})
+        rows.append(
+            {
+                "Exercise": exercise,
+                "Default group": default_group,
+                "Primary targets": ", ".join(muscle for muscle, weight in targets.items() if weight >= 0.75),
+                "Secondary targets": ", ".join(
+                    f"{muscle} ({weight:g})" for muscle, weight in targets.items() if weight < 0.75
+                ),
+            }
+        )
+
+    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    st.markdown("**Raw mapping weights**")
+    raw_rows = []
+    for exercise, targets in sorted(MUSCLE_TARGETS.items()):
+        for muscle, weight in targets.items():
+            raw_rows.append({"Exercise": exercise, "Muscle": muscle, "Weight": weight})
+    st.dataframe(pd.DataFrame(raw_rows), hide_index=True, use_container_width=True)
+
+
 def main() -> None:
     st.set_page_config(page_title="Training Lab", page_icon=":material/fitness_center:", layout="wide")
     st.title("Training Lab")
@@ -1225,8 +1253,8 @@ def main() -> None:
         st.sidebar.caption(f"CSV export: {to_google_sheet_csv_url(csv_url)}")
 
     df = load_workouts(csv_url)
-    gym_tab, log_tab, progress_tab, muscle_trends_tab, dashboard_tab, setup_tab, data_tab = st.tabs(
-        ["Gym view", "Log workout", "Progress", "Muscle trends", "Dashboard", "Setup", "Data"]
+    gym_tab, log_tab, progress_tab, muscle_trends_tab, dashboard_tab, setup_tab, data_tab, mappings_tab = st.tabs(
+        ["Gym view", "Log workout", "Progress", "Muscle trends", "Dashboard", "Setup", "Data", "Mappings"]
     )
 
     with gym_tab:
@@ -1243,6 +1271,8 @@ def main() -> None:
         render_setup(csv_url)
     with data_tab:
         render_data(df)
+    with mappings_tab:
+        render_mappings()
 
 
 if __name__ == "__main__":
