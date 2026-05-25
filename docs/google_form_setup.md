@@ -28,4 +28,6 @@ Useful Google Sheets CSV format:
 https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/export?format=csv&gid=SHEET_GID
 ```
 
-The dashboard maps the Google Form column names into its internal workout schema. For the 6-exercise form, it converts each filled exercise block into a normal per-exercise row before calculating charts.
+The dashboard maps the Google Form column names into its internal workout schema. For the 6-exercise form, the raw sheet is wide format, and the app converts each filled exercise block into long-format per-exercise rows before calculating charts.
+
+If you submit `Later update only` with no exercises, the app creates a zero-set `Session update` row. This lets you add body weight, protein, calories, heart rate, or notes later without disrupting the workout logging flow.

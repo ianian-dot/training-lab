@@ -33,7 +33,10 @@ EXERCISES = {
     "Pull-up": "Back",
     "Rear delt machine": "Shoulders",
     "Leg extension": "Legs",
+    "Incline bench press": "Chest",
     "Incline T-bar row": "Back",
+    "Leg press": "Legs",
+    "Leg press calf raise": "Legs",
     "Cycling": "Cardio",
 }
 
@@ -54,6 +57,12 @@ MUSCLE_TARGETS = {
         "Chest": 1.0,
         "Front delts": 0.45,
         "Triceps": 0.45,
+    },
+    "incline bench press": {
+        "Upper chest": 1.0,
+        "Chest": 0.65,
+        "Front delts": 0.55,
+        "Triceps": 0.4,
     },
     "seated lateral raise machine": {
         "Side delts": 1.0,
@@ -109,6 +118,15 @@ MUSCLE_TARGETS = {
     },
     "leg extension": {
         "Quads": 1.0,
+    },
+    "leg press": {
+        "Quads": 1.0,
+        "Glutes": 0.65,
+        "Hamstrings": 0.35,
+        "Calves": 0.15,
+    },
+    "leg press calf raise": {
+        "Calves": 1.0,
     },
     "incline t-bar row": {
         "Upper back": 1.0,
@@ -223,6 +241,30 @@ def is_filled(value: object) -> bool:
     return str(value).strip() != ""
 
 
+def detect_exercise_name(value: object) -> str:
+    if not is_filled(value):
+        return ""
+
+    raw = str(value).strip()
+    normalized = canonical_label(raw).replace("-", " ")
+    compact = " ".join(normalized.split())
+
+    if ("calf" in compact or "calves" in compact) and "leg press" in compact:
+        return "Leg press calf raise"
+    if "leg press" in compact:
+        return "Leg press"
+    if "incline" in compact and ("bench" in compact or "press" in compact):
+        return "Incline bench press"
+    if "inclined" in compact and ("bench" in compact or "press" in compact):
+        return "Incline bench press"
+
+    for exercise in EXERCISES:
+        if canonical_label(exercise) == compact:
+            return exercise
+
+    return raw
+
+
 def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
     lookup = {canonical_label(column): column for column in df.columns}
     has_multi_exercise_columns = any(canonical_label(f"Exercise {index}") in lookup for index in range(1, 7))
@@ -231,10 +273,11 @@ def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
 
     rows = []
     for _, form_row in df.iterrows():
+        entry_type = row_value(form_row, lookup, "Entry type")
         session_fields = {
             "date": row_value(form_row, lookup, "Date", "Workout date"),
             "start_time": row_value(form_row, lookup, "Start time"),
-            "session_type": row_value(form_row, lookup, "Session", "Session type"),
+            "session_type": row_value(form_row, lookup, "Session", "Session type", "Entry type"),
             "duration_min": row_value(form_row, lookup, "Duration min", "Duration (min)"),
             "calories": row_value(form_row, lookup, "Calories"),
             "avg_heart_rate": row_value(form_row, lookup, "Avg heart rate", "Average heart rate"),
@@ -251,6 +294,7 @@ def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
         }
 
         session_notes = row_value(form_row, lookup, "Session notes", "Notes")
+        row_count_before = len(rows)
         for index in range(1, 7):
             exercise = row_value(form_row, lookup, f"Exercise {index}")
             other_exercise = row_value(form_row, lookup, f"Other exercise {index}")
@@ -260,7 +304,7 @@ def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
             if not is_filled(exercise):
                 continue
 
-            exercise_name = str(exercise).strip()
+            exercise_name = detect_exercise_name(exercise)
             if exercise_name.lower() == "other":
                 continue
 
@@ -285,6 +329,50 @@ def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
                     "weight_kg": row_value(form_row, lookup, f"Weight kg {index}", f"Weight (kg) {index}"),
                     "weight_basis": row_value(form_row, lookup, f"Weight basis {index}"),
                     "rpe": row_value(form_row, lookup, f"RPE {index}"),
+                    "notes": notes,
+                }
+            )
+
+        has_session_update = any(
+            is_filled(session_fields[field])
+            for field in [
+                "duration_min",
+                "calories",
+                "avg_heart_rate",
+                "max_heart_rate",
+                "body_weight_kg",
+                "protein_taken",
+                "protein_grams",
+                "energy",
+                "motivation",
+                "session_quality",
+                "productivity",
+                "sleep_hours",
+                "feeling",
+            ]
+        )
+        no_exercises_added = len(rows) == row_count_before
+        if no_exercises_added and has_session_update:
+            notes = " | ".join(
+                str(note).strip()
+                for note in [entry_type, session_notes]
+                if is_filled(note)
+            )
+            rows.append(
+                {
+                    **session_fields,
+                    "session_type": (
+                        session_fields["session_type"]
+                        if is_filled(session_fields["session_type"])
+                        else "Session update"
+                    ),
+                    "exercise": "Session update",
+                    "muscle_group": "Recovery",
+                    "sets": None,
+                    "reps": None,
+                    "weight_kg": None,
+                    "weight_basis": None,
+                    "rpe": None,
                     "notes": notes,
                 }
             )
@@ -352,6 +440,9 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
             df[column] = None
 
     df = df[COLUMNS]
+    df["exercise"] = df["exercise"].apply(detect_exercise_name)
+    missing_group = df["muscle_group"].isna() | (df["muscle_group"].fillna("").astype(str).str.strip() == "")
+    df.loc[missing_group, "muscle_group"] = df.loc[missing_group, "exercise"].map(EXERCISES).fillna("Full body")
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
     for column in [
         "sets",

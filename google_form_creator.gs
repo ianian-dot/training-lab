@@ -13,7 +13,10 @@ function createTrainingLabForm() {
     'Pull-up',
     'Rear delt machine',
     'Leg extension',
+    'Incline bench press',
     'Incline T-bar row',
+    'Leg press',
+    'Leg press calf raise',
     'Cycling',
     'Other'
   ];
@@ -34,6 +37,11 @@ function createTrainingLabForm() {
   form.setDescription('Submit one response per gym session. Fill each exercise block as you finish it. Leave unused blocks blank.');
   form.setCollectEmail(false);
 
+  form.addMultipleChoiceItem()
+    .setTitle('Entry type')
+    .setChoiceValues(['Workout session', 'Later update only'])
+    .setRequired(true);
+
   form.addDateItem().setTitle('Date').setRequired(true);
   form.addTimeItem().setTitle('Start time');
 
@@ -46,8 +54,7 @@ function createTrainingLabForm() {
 
     form.addListItem()
       .setTitle('Exercise ' + index)
-      .setChoiceValues(exercises)
-      .setRequired(index === 1);
+      .setChoiceValues(exercises);
 
     form.addTextItem().setTitle('Other exercise ' + index);
 
@@ -57,18 +64,15 @@ function createTrainingLabForm() {
 
     form.addTextItem()
       .setTitle('Sets ' + index)
-      .setHelpText('Example: 4 or 3.5')
-      .setRequired(index === 1);
+      .setHelpText('Example: 4 or 3.5');
 
     form.addTextItem()
       .setTitle('Reps ' + index)
-      .setHelpText('Use one number for now. Example: 10')
-      .setRequired(index === 1);
+      .setHelpText('Use one number for now. Example: 10');
 
     form.addTextItem()
       .setTitle('Weight kg ' + index)
-      .setHelpText('Use the number you want to track consistently.')
-      .setRequired(index === 1);
+      .setHelpText('Use the number you want to track consistently.');
 
     form.addListItem()
       .setTitle('Weight basis ' + index)

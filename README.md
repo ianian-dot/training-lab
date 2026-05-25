@@ -38,7 +38,9 @@ The gym-friendly workflow is:
 
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
 
-The Google Sheet stores each session as one wide row, but the dashboard converts those exercise blocks into one analysis row per exercise.
+The Google Sheet stores each session as one wide row, with columns like `Exercise 1`, `Sets 1`, `Exercise 2`, `Sets 2`, and so on. The dashboard converts those exercise blocks into one long-format analysis row per exercise.
+
+You can also submit a later update with no exercises, for example body weight or protein later in the day. The dashboard stores that as a zero-set `Session update` row so recovery data is kept without changing muscle-volume charts.
 
 For Streamlit to read the sheet, share it as `Anyone with the link can view` or publish it to the web.
 
@@ -47,6 +49,7 @@ For Streamlit to read the sheet, share it as `Anyone with the link can view` or 
 The app maps each exercise to weighted target muscles. For example:
 
 - Bench press: chest, front delts, triceps
+- Incline bench press: upper chest, chest, front delts, triceps
 - Lat pulldown and pull-up: lats, upper back, biceps
 - Seated row: upper back, lats, rear delts, biceps
 - Lateral raises: side delts
@@ -55,6 +58,8 @@ The app maps each exercise to weighted target muscles. For example:
 - Tricep pulldown and overhead tricep extension: triceps
 - Rear delt machine: rear delts, upper back, traps
 - Leg extension: quads
+- Leg press: quads, glutes, hamstrings, calves
+- Leg press calf raise: calves
 - Incline T-bar row: upper back, lats, rear delts, biceps, traps
 - Cycling: cardio, quads, glutes, calves, hamstrings
 
