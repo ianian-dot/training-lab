@@ -47,6 +47,8 @@ To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed
 
 The Google Sheet stores each session as one wide row, with columns like `Exercise 1`, `Sets 1`, `Exercise 2`, `Sets 2`, and so on. The dashboard converts those exercise blocks into one long-format analysis row per exercise.
 
+The form dropdown is grouped with prefixes such as `Push / Bench press`, `Pull / Lat pulldown`, `Legs / Leg press`, and `Cardio / Stationary bike`. The dashboard strips the prefix and stores the clean exercise name.
+
 The legacy form file is converted the same way. Older `Other exercise` entries are keyword-detected, including inclined bench, hammer curls, leg press calf raises, and stationary bike.
 
 You can also submit a later update with no exercises, for example body weight or protein later in the day. The dashboard stores that as a zero-set `Session update` row so recovery data is kept without changing muscle-volume charts.

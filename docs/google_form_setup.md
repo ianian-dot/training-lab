@@ -35,6 +35,8 @@ https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/export?format=csv&gid=SHEE
 
 The dashboard maps the Google Form column names into its internal workout schema. For the 6-exercise form, the raw sheet is wide format, and the app converts each filled exercise block into long-format per-exercise rows before calculating charts.
 
+The new form's exercise dropdown is grouped with labels like `Push / Bench press` and `Pull / Lat pulldown` so it is easier to scan on a phone. The app strips the group prefix and stores the clean exercise name.
+
 If you submit `Later update only` with no exercises, the app creates a zero-set `Session update` row. This lets you add body weight, protein, calories, heart rate, or notes later without disrupting the workout logging flow.
 
 Older entries that used `Other exercise` are detected by keyword. For example:

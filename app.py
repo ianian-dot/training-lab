@@ -40,6 +40,37 @@ EXERCISES = {
     "Stationary bike": "Cardio",
 }
 
+EXERCISE_CATEGORIES = {
+    "Push": [
+        "Bench press",
+        "Incline bench press",
+        "Seated shoulder press",
+        "Seated lateral raise machine",
+        "Single-arm shoulder raise",
+        "Tricep pulldown",
+        "Overhead dumbbell tricep extension",
+    ],
+    "Pull": [
+        "Lat pulldown",
+        "Seated row",
+        "Incline T-bar row",
+        "Pull-up",
+        "Rear delt machine",
+        "Barbell bicep curl",
+        "Dumbbell bicep curl",
+        "Bicep hammer curl",
+    ],
+    "Legs": [
+        "Leg extension",
+        "Leg press",
+        "Leg press calf raise",
+    ],
+    "Cardio": [
+        "Cycling",
+        "Stationary bike",
+    ],
+}
+
 MUSCLE_GROUPS = [
     "Chest",
     "Back",
@@ -258,6 +289,11 @@ def detect_exercise_name(value: object) -> str:
         return ""
 
     raw = str(value).strip()
+    if " / " in raw:
+        possible_exercise = raw.split(" / ", 1)[1].strip()
+        if possible_exercise:
+            raw = possible_exercise
+
     normalized = canonical_label(raw).replace("-", " ")
     compact = " ".join(normalized.split())
 
@@ -858,8 +894,18 @@ def render_log_form() -> None:
         workout_date = left.date_input("Date", value=date.today())
         start_time = right.time_input("Start time", value=datetime.now().time().replace(second=0, microsecond=0))
 
-        session_type = left.selectbox("Session", ["Upper", "Push", "Pull", "Arms", "Full body", "Other"])
-        exercise_choice = right.selectbox("Exercise", sorted(EXERCISES) + ["Custom"])
+        session_type = left.selectbox("Session", ["Upper", "Push", "Pull", "Legs", "Arms", "Full body", "Cardio", "Other"])
+        exercise_category = right.selectbox("Exercise group", [*EXERCISE_CATEGORIES, "All", "Custom"])
+
+        if exercise_category == "Custom":
+            exercise_choice = "Custom"
+        else:
+            exercise_options = (
+                sorted(EXERCISES)
+                if exercise_category == "All"
+                else EXERCISE_CATEGORIES[exercise_category]
+            )
+            exercise_choice = right.selectbox("Exercise", exercise_options)
 
         if exercise_choice == "Custom":
             exercise = st.text_input("Custom exercise")
