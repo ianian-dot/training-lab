@@ -14,6 +14,7 @@ python3 -m streamlit run app.py
 - Seated lateral raise machine
 - Barbell bicep curl
 - Dumbbell bicep curl
+- Bicep hammer curl
 - Single-arm shoulder raise
 - Seated shoulder press
 - Lat pulldown
@@ -23,8 +24,14 @@ python3 -m streamlit run app.py
 - Pull-up
 - Rear delt machine
 - Leg extension
+- Incline bench press
+- Incline T-bar row
+- Leg press
+- Leg press calf raise
+- Cycling
+- Stationary bike
 
-Workout data is stored in `data/workouts.csv`.
+Seed workout data is stored in `data/workouts.csv`. The old Google Form responses are snapshotted in `data/legacy_google_form.csv`, and the app reads that file automatically.
 
 ## Google Form logging
 
@@ -32,17 +39,21 @@ The gym-friendly workflow is:
 
 1. Submit one Google Form response per gym session.
 2. Fill up to 6 exercise blocks as you finish each exercise.
-2. The form writes to a linked Google Sheet.
-3. Paste the sheet CSV export URL into the dashboard sidebar.
-4. The dashboard uses that sheet instead of the local CSV.
+3. The form writes to a linked Google Sheet.
+4. Paste the new sheet URL into the dashboard sidebar.
+5. The dashboard combines the seed CSV, legacy form CSV, and new Google Sheet.
 
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
 
 The Google Sheet stores each session as one wide row, with columns like `Exercise 1`, `Sets 1`, `Exercise 2`, `Sets 2`, and so on. The dashboard converts those exercise blocks into one long-format analysis row per exercise.
 
+The legacy form file is converted the same way. Older `Other exercise` entries are keyword-detected, including inclined bench, hammer curls, leg press calf raises, and stationary bike.
+
 You can also submit a later update with no exercises, for example body weight or protein later in the day. The dashboard stores that as a zero-set `Session update` row so recovery data is kept without changing muscle-volume charts.
 
 For Streamlit to read the sheet, share it as `Anyone with the link can view` or publish it to the web.
+
+On Streamlit Community Cloud, add the new sheet URL as a secret named `google_sheet_url` so the deployed app reads it by default.
 
 ## Muscle target logic
 
@@ -55,6 +66,7 @@ The app maps each exercise to weighted target muscles. For example:
 - Lateral raises: side delts
 - Shoulder press: front delts, side delts, triceps
 - Bicep curls: biceps and forearms
+- Hammer curls: brachialis, biceps, forearms
 - Tricep pulldown and overhead tricep extension: triceps
 - Rear delt machine: rear delts, upper back, traps
 - Leg extension: quads
@@ -62,6 +74,7 @@ The app maps each exercise to weighted target muscles. For example:
 - Leg press calf raise: calves
 - Incline T-bar row: upper back, lats, rear delts, biceps, traps
 - Cycling: cardio, quads, glutes, calves, hamstrings
+- Stationary bike: cardio, quads, glutes, calves, hamstrings
 
 The dashboard uses this to estimate target sets per muscle over the last 14 days and suggest what looks most due.
 

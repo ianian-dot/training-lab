@@ -13,17 +13,16 @@ import streamlit.components.v1 as components
 APP_DIR = Path(__file__).parent
 DATA_DIR = APP_DIR / "data"
 WORKOUTS_PATH = DATA_DIR / "workouts.csv"
+LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
-DEFAULT_GOOGLE_SHEET_URL = (
-    "https://docs.google.com/spreadsheets/d/"
-    "1WBjw_OY7rI-RWbt9BzsxeHJ0xtOTXZqyP1gRqCjQ-4w/edit?gid=998599074#gid=998599074"
-)
+DEFAULT_GOOGLE_SHEET_URL = ""
 
 EXERCISES = {
     "Bench press": "Chest",
     "Seated lateral raise machine": "Shoulders",
     "Barbell bicep curl": "Biceps",
     "Dumbbell bicep curl": "Biceps",
+    "Bicep hammer curl": "Biceps",
     "Single-arm shoulder raise": "Shoulders",
     "Seated shoulder press": "Shoulders",
     "Lat pulldown": "Back",
@@ -38,6 +37,7 @@ EXERCISES = {
     "Leg press": "Legs",
     "Leg press calf raise": "Legs",
     "Cycling": "Cardio",
+    "Stationary bike": "Cardio",
 }
 
 MUSCLE_GROUPS = [
@@ -86,6 +86,11 @@ MUSCLE_TARGETS = {
     "dumbbell bicep curl": {
         "Biceps": 1.0,
         "Forearms": 0.35,
+    },
+    "bicep hammer curl": {
+        "Brachialis": 1.0,
+        "Biceps": 0.65,
+        "Forearms": 0.55,
     },
     "lat pulldown": {
         "Lats": 1.0,
@@ -142,11 +147,18 @@ MUSCLE_TARGETS = {
         "Calves": 0.25,
         "Hamstrings": 0.15,
     },
+    "stationary bike": {
+        "Cardio": 1.0,
+        "Quads": 0.45,
+        "Glutes": 0.25,
+        "Calves": 0.25,
+        "Hamstrings": 0.15,
+    },
 }
 
 MUSCLE_SECTIONS = {
     "Push": ["Chest", "Upper chest", "Front delts", "Side delts", "Triceps"],
-    "Pull": ["Lats", "Upper back", "Rear delts", "Traps", "Biceps", "Forearms"],
+    "Pull": ["Lats", "Upper back", "Rear delts", "Traps", "Biceps", "Brachialis", "Forearms"],
     "Legs / Core": ["Quads", "Hamstrings", "Glutes", "Calves", "Core"],
     "Conditioning": ["Cardio"],
 }
@@ -251,12 +263,22 @@ def detect_exercise_name(value: object) -> str:
 
     if ("calf" in compact or "calves" in compact) and "leg press" in compact:
         return "Leg press calf raise"
+    if ("calf" in compact or "calves" in compact) and "press" in compact:
+        return "Leg press calf raise"
+    if "calve lag press" in compact or "calf leg press" in compact:
+        return "Leg press calf raise"
     if "leg press" in compact:
         return "Leg press"
+    if "hammer" in compact and ("curl" in compact or "bicep" in compact):
+        return "Bicep hammer curl"
     if "incline" in compact and ("bench" in compact or "press" in compact):
         return "Incline bench press"
     if "inclined" in compact and ("bench" in compact or "press" in compact):
         return "Incline bench press"
+    if "stationary bike" in compact or "exercise bike" in compact:
+        return "Stationary bike"
+    if "cycling" in compact:
+        return "Cycling"
 
     for exercise in EXERCISES:
         if canonical_label(exercise) == compact:
@@ -492,18 +514,24 @@ def to_google_sheet_csv_url(sheet_url: str) -> str:
 
 def load_workouts(csv_url: str | None = None) -> pd.DataFrame:
     ensure_data_file()
-    local_df = normalize_workouts(pd.read_csv(WORKOUTS_PATH))
+    frames = [normalize_workouts(pd.read_csv(WORKOUTS_PATH))]
+
+    if LEGACY_FORM_PATH.exists():
+        try:
+            frames.append(normalize_workouts(pd.read_csv(LEGACY_FORM_PATH)))
+        except Exception as exc:
+            st.sidebar.error(f"Could not load legacy Google Form CSV: {exc}")
+
     if csv_url:
         try:
-            sheet_df = normalize_workouts(read_google_sheet_csv(csv_url))
-            combined = pd.concat([local_df, sheet_df], ignore_index=True)
-            dedupe_columns = ["date", "exercise", "sets", "reps", "weight_kg", "weight_basis", "notes"]
-            return combined.drop_duplicates(subset=dedupe_columns, keep="last").reset_index(drop=True)
+            frames.append(normalize_workouts(read_google_sheet_csv(csv_url)))
         except Exception as exc:
             st.sidebar.error(f"Could not load Google Sheet CSV: {exc}")
             st.sidebar.info("Make sure the sheet is shared as 'Anyone with the link can view' or published to the web.")
 
-    return local_df
+    combined = pd.concat(frames, ignore_index=True)
+    dedupe_columns = ["date", "exercise", "sets", "reps", "weight_kg", "weight_basis", "notes"]
+    return combined.drop_duplicates(subset=dedupe_columns, keep="last").reset_index(drop=True)
 
 
 def append_workout(row: dict) -> None:
@@ -1176,11 +1204,11 @@ def render_setup(csv_url: str | None) -> None:
     st.write("Use Google Forms on your phone at the gym. This dashboard can read the linked Google Sheet afterward.")
 
     st.markdown("**Create the form**")
-    st.write("Open the script below in Google Apps Script, run `createTrainingLabForm`, and it will create a Google Form plus linked response sheet.")
+    st.write("Open the script below in Google Apps Script, run `createTrainingLabForm`, and it will create a fresh Google Form plus linked response sheet.")
     st.code(str(FORM_SCRIPT_PATH), language="text")
 
     st.markdown("**Connect the sheet**")
-    st.write("After responses start coming in, publish or export the response sheet as CSV and paste that CSV URL into the sidebar.")
+    st.write("After responses start coming in, share the new response sheet as viewable by anyone with the link, then paste that new sheet URL into the sidebar.")
     if csv_url:
         st.success("Google Sheet CSV is active.")
     else:
@@ -1200,6 +1228,8 @@ def render_setup(csv_url: str | None) -> None:
 def render_data(df: pd.DataFrame) -> None:
     st.subheader("Data")
     st.caption(str(WORKOUTS_PATH))
+    if LEGACY_FORM_PATH.exists():
+        st.caption(f"Legacy Google Form snapshot: {LEGACY_FORM_PATH}")
 
     export = df.copy()
     if not export.empty:
@@ -1241,14 +1271,19 @@ def main() -> None:
     st.title("Training Lab")
     st.caption("Log the lifts you actually do, then watch consistency, volume, and strength trends.")
 
+    default_sheet_url = st.secrets.get("google_sheet_url", DEFAULT_GOOGLE_SHEET_URL)
+
     st.sidebar.header("Data source")
     google_sheet_url = st.sidebar.text_input(
-        "Google Sheet URL",
-        value=DEFAULT_GOOGLE_SHEET_URL,
+        "New Google Sheet URL",
+        value=default_sheet_url,
         placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=...",
     ).strip()
     csv_url = google_sheet_url or None
-    st.sidebar.caption(f"Using: {'Google Sheet' if csv_url else 'Local CSV'}")
+    st.sidebar.caption(
+        "Using: local seed CSV + legacy form CSV"
+        + (" + new Google Sheet" if csv_url else "")
+    )
     if csv_url:
         st.sidebar.caption(f"CSV export: {to_google_sheet_csv_url(csv_url)}")
 

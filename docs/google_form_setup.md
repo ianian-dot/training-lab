@@ -1,6 +1,8 @@
 # Google Form Setup
 
-Use `google_form_creator.gs` to create a Google Form and linked Google Sheet. The form records one gym session per submission, with up to 6 exercise blocks.
+Use `google_form_creator.gs` to create a fresh Google Form and linked Google Sheet. The form records one gym session per submission, with up to 6 exercise blocks.
+
+The old Google Form responses are preserved in `data/legacy_google_form.csv`. The dashboard reads that file automatically, then reads the new Google Sheet URL you paste into the sidebar.
 
 ## Steps
 
@@ -12,10 +14,13 @@ Use `google_form_creator.gs` to create a Google Form and linked Google Sheet. Th
 6. Open the logs to get:
    - Form submit URL
    - Response sheet URL
+7. Share the new response sheet as `Anyone with the link can view`.
+8. Paste the new response sheet URL into the dashboard sidebar.
+9. For Streamlit Community Cloud, add the same URL as a secret named `google_sheet_url` so the deployed app remembers it.
 
 ## Connect To The Dashboard
 
-Once responses exist, publish or export the response sheet as CSV and paste the CSV URL into the dashboard sidebar.
+Once responses exist, paste the new response sheet URL into the dashboard sidebar. A normal Google Sheets edit URL is fine; the app converts it to CSV internally.
 
 The sheet must be readable by Streamlit. Use one of these options:
 
@@ -31,3 +36,10 @@ https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/export?format=csv&gid=SHEE
 The dashboard maps the Google Form column names into its internal workout schema. For the 6-exercise form, the raw sheet is wide format, and the app converts each filled exercise block into long-format per-exercise rows before calculating charts.
 
 If you submit `Later update only` with no exercises, the app creates a zero-set `Session update` row. This lets you add body weight, protein, calories, heart rate, or notes later without disrupting the workout logging flow.
+
+Older entries that used `Other exercise` are detected by keyword. For example:
+
+- `inclined bench` -> `Incline bench press`
+- `hammer curl` -> `Bicep hammer curl`
+- `leg press calves` -> `Leg press calf raise`
+- `stationary bike` -> `Stationary bike`

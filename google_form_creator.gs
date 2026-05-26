@@ -4,6 +4,7 @@ function createTrainingLabForm() {
     'Seated lateral raise machine',
     'Barbell bicep curl',
     'Dumbbell bicep curl',
+    'Bicep hammer curl',
     'Single-arm shoulder raise',
     'Seated shoulder press',
     'Lat pulldown',
@@ -18,6 +19,7 @@ function createTrainingLabForm() {
     'Leg press',
     'Leg press calf raise',
     'Cycling',
+    'Stationary bike',
     'Other'
   ];
 
@@ -33,8 +35,8 @@ function createTrainingLabForm() {
     'Full body'
   ];
 
-  const form = FormApp.create('Training Lab Workout Log');
-  form.setDescription('Submit one response per gym session. Fill each exercise block as you finish it. Leave unused blocks blank.');
+  const form = FormApp.create('Training Lab Workout Log V2');
+  form.setDescription('Submit one response per gym session. Fill each exercise block as you finish it. Leave unused blocks blank. Use Later update only for body weight, protein, or notes after the workout.');
   form.setCollectEmail(false);
 
   form.addMultipleChoiceItem()
