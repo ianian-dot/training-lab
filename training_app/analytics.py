@@ -133,6 +133,55 @@ def latest_body_metrics(df: pd.DataFrame) -> dict[str, dict[str, object]]:
     return {field: latest_value(df, field) for field in fields}
 
 
+def daily_recovery_performance(df: pd.DataFrame) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date"]).copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    workouts["day"] = pd.to_datetime(workouts["date"]).dt.normalize()
+    daily = (
+        workouts.groupby("day", as_index=False)
+        .agg(
+            body_weight_kg=("body_weight_kg", "max"),
+            protein_grams=("protein_grams", "max"),
+            calories=("calories", "max"),
+            duration_min=("duration_min", "max"),
+            avg_heart_rate=("avg_heart_rate", "max"),
+            volume_kg=("volume_kg", "sum"),
+            load_kg=("load_kg", "max"),
+            estimated_1rm_kg=("estimated_1rm_kg", "max"),
+            rpe=("rpe", "mean"),
+            energy=("energy", "max"),
+            motivation=("motivation", "max"),
+            session_quality=("session_quality", "max"),
+            sleep_hours=("sleep_hours", "max"),
+        )
+        .sort_values("day")
+    )
+    daily["protein_logged"] = daily["protein_grams"].fillna(0) > 0
+    daily["performance_score"] = daily["volume_kg"].fillna(0)
+    return daily
+
+
+def protein_performance_summary(df: pd.DataFrame) -> pd.DataFrame:
+    daily = daily_recovery_performance(df)
+    if daily.empty:
+        return pd.DataFrame()
+
+    summary = (
+        daily.groupby("protein_logged", as_index=False)
+        .agg(
+            days=("day", "count"),
+            avg_volume_kg=("volume_kg", "mean"),
+            avg_session_quality=("session_quality", "mean"),
+            avg_energy=("energy", "mean"),
+            avg_body_weight_kg=("body_weight_kg", "mean"),
+        )
+        .replace({"protein_logged": {True: "Protein logged", False: "No protein logged"}})
+    )
+    return summary
+
+
 def calendar_matrix(df: pd.DataFrame) -> pd.DataFrame:
     days = session_days(df)
     if days.empty:

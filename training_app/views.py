@@ -12,9 +12,11 @@ from .analytics import (
     calendar_matrix,
     cost_summary,
     current_month_summary,
+    daily_recovery_performance,
     format_current_target,
     format_set_target,
     latest_body_metrics,
+    protein_performance_summary,
     rest_day_summary,
     session_days,
     weekly_session_counts,
@@ -31,6 +33,93 @@ from .config import (
 )
 from .data import append_workout, canonical_label
 from .visualizations import format_days_ago, render_muscle_target_visual
+
+
+def render_recovery_trends(df: pd.DataFrame) -> None:
+    st.subheader("Recovery trends")
+
+    daily = daily_recovery_performance(df)
+    if daily.empty:
+        st.info("Log workouts with recovery details to unlock these charts.")
+        return
+
+    st.caption("These charts are exploratory. They show relationships, not proof that protein caused a change.")
+
+    weight_col, protein_col = st.columns(2)
+    with weight_col:
+        st.markdown("**Body weight over time**")
+        weight = daily.dropna(subset=["body_weight_kg"])
+        if weight.empty:
+            st.info("No body weight entries yet.")
+        else:
+            st.line_chart(weight, x="day", y="body_weight_kg", use_container_width=True)
+
+    with protein_col:
+        st.markdown("**Protein and workout volume**")
+        protein_volume = daily[["day", "protein_grams", "volume_kg"]].copy()
+        if protein_volume[["protein_grams", "volume_kg"]].dropna(how="all").empty:
+            st.info("No protein or volume entries yet.")
+        else:
+            st.line_chart(protein_volume, x="day", y=["protein_grams", "volume_kg"], use_container_width=True)
+
+    st.markdown("**Performance and session quality over time**")
+    trend_options = {
+        "Volume": "volume_kg",
+        "Best load": "load_kg",
+        "Estimated 1RM": "estimated_1rm_kg",
+        "Session quality": "session_quality",
+        "Energy": "energy",
+        "Motivation": "motivation",
+        "Sleep": "sleep_hours",
+        "Avg heart rate": "avg_heart_rate",
+    }
+    selected = st.multiselect(
+        "Metrics",
+        list(trend_options),
+        default=["Volume", "Session quality", "Energy"],
+    )
+    trend_columns = [trend_options[label] for label in selected]
+    if trend_columns:
+        st.line_chart(daily[["day", *trend_columns]], x="day", y=trend_columns, use_container_width=True)
+    else:
+        st.info("Choose at least one metric.")
+
+    compare_col, table_col = st.columns([1, 1])
+    with compare_col:
+        st.markdown("**Protein logged vs not logged**")
+        comparison = protein_performance_summary(df)
+        if comparison.empty or len(comparison) < 2:
+            st.info("Log a few days with and without protein to make this comparison useful.")
+        else:
+            st.dataframe(
+                comparison.round(
+                    {
+                        "avg_volume_kg": 0,
+                        "avg_session_quality": 1,
+                        "avg_energy": 1,
+                        "avg_body_weight_kg": 1,
+                    }
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
+
+    with table_col:
+        st.markdown("**Daily recovery summary**")
+        summary = daily[
+            [
+                "day",
+                "body_weight_kg",
+                "protein_grams",
+                "volume_kg",
+                "session_quality",
+                "energy",
+                "sleep_hours",
+            ]
+        ].copy()
+        summary["day"] = summary["day"].dt.strftime("%Y-%m-%d")
+        st.dataframe(summary.round(1), hide_index=True, use_container_width=True)
+
 
 def render_muscle_trends(df: pd.DataFrame) -> None:
     st.subheader("Muscle trends")

@@ -12,6 +12,7 @@ from training_app.views import (
     render_mappings,
     render_muscle_trends,
     render_progress,
+    render_recovery_trends,
     render_setup,
 )
 
@@ -38,8 +39,28 @@ def main() -> None:
         st.sidebar.caption(f"CSV export: {to_google_sheet_csv_url(csv_url)}")
 
     df = load_workouts(csv_url)
-    gym_tab, log_tab, progress_tab, muscle_trends_tab, dashboard_tab, setup_tab, data_tab, mappings_tab = st.tabs(
-        ["Gym view", "Log workout", "Progress", "Muscle trends", "Dashboard", "Setup", "Data", "Mappings"]
+    (
+        gym_tab,
+        log_tab,
+        progress_tab,
+        muscle_trends_tab,
+        recovery_trends_tab,
+        dashboard_tab,
+        setup_tab,
+        data_tab,
+        mappings_tab,
+    ) = st.tabs(
+        [
+            "Gym view",
+            "Log workout",
+            "Progress",
+            "Muscle trends",
+            "Recovery trends",
+            "Dashboard",
+            "Setup",
+            "Data",
+            "Mappings",
+        ]
     )
 
     with gym_tab:
@@ -50,6 +71,8 @@ def main() -> None:
         render_progress(df)
     with muscle_trends_tab:
         render_muscle_trends(df)
+    with recovery_trends_tab:
+        render_recovery_trends(df)
     with dashboard_tab:
         render_dashboard(df)
     with setup_tab:

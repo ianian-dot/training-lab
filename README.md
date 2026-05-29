@@ -108,6 +108,18 @@ The Dashboard tab includes higher-level training consistency metrics:
 - weekly gym session bar chart
 - estimated gym cost per session using your monthly fee
 
+## Recovery Trends
+
+The Recovery trends tab explores how recovery/context data moves alongside training:
+
+- body weight over time
+- protein grams over time
+- workout volume and performance over time
+- session quality, energy, motivation, sleep, and heart rate trends
+- simple comparison of days with protein logged versus no protein logged
+
+These charts are exploratory rather than causal. They help generate questions like whether higher-protein days tend to coincide with higher volume or better session quality.
+
 ## Weight And Load Logic
 
 `weight_kg` is the number you entered. `load_kg` is the calculated training load used for volume and estimated 1RM.
