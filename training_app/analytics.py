@@ -4,6 +4,84 @@ import pandas as pd
 
 from .config import ALL_TRACKED_MUSCLES, MUSCLE_TARGETS
 
+
+def workout_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    return df[df["exercise"].fillna("") != "Session update"].copy()
+
+
+def session_days(df: pd.DataFrame) -> pd.Series:
+    workouts = workout_rows(df).dropna(subset=["date"])
+    if workouts.empty:
+        return pd.Series(dtype="datetime64[ns]")
+    days = pd.to_datetime(workouts["date"]).dt.normalize().drop_duplicates().sort_values()
+    return days.reset_index(drop=True)
+
+
+def weekly_session_counts(df: pd.DataFrame) -> pd.DataFrame:
+    days = session_days(df)
+    if days.empty:
+        return pd.DataFrame(columns=["week_start", "sessions"])
+
+    weekly = pd.DataFrame({"date": days, "sessions": 1})
+    weekly["week_start"] = weekly["date"].dt.to_period("W-SUN").apply(lambda value: value.start_time)
+    return weekly.groupby("week_start", as_index=False)["sessions"].sum()
+
+
+def rest_day_summary(df: pd.DataFrame) -> dict[str, float | int | None]:
+    days = session_days(df)
+    if days.empty:
+        return {"sessions": 0, "avg_gap_days": None, "avg_rest_days": None, "longest_rest_days": None}
+    if len(days) == 1:
+        return {"sessions": 1, "avg_gap_days": None, "avg_rest_days": None, "longest_rest_days": None}
+
+    gaps = days.diff().dropna().dt.days
+    rest_days = (gaps - 1).clip(lower=0)
+    return {
+        "sessions": int(len(days)),
+        "avg_gap_days": float(gaps.mean()),
+        "avg_rest_days": float(rest_days.mean()),
+        "longest_rest_days": int(rest_days.max()),
+    }
+
+
+def cost_summary(df: pd.DataFrame, monthly_fee: float) -> dict[str, float | int | None]:
+    days = session_days(df)
+    if days.empty or monthly_fee <= 0:
+        return {"months": 0, "total_cost": 0.0, "cost_per_session": None}
+
+    first_month = days.min().to_period("M")
+    latest_month = days.max().to_period("M")
+    months = len(pd.period_range(first_month, latest_month, freq="M"))
+    total_cost = float(months * monthly_fee)
+    return {
+        "months": int(months),
+        "total_cost": total_cost,
+        "cost_per_session": total_cost / len(days),
+    }
+
+
+def calendar_matrix(df: pd.DataFrame) -> pd.DataFrame:
+    days = session_days(df)
+    if days.empty:
+        return pd.DataFrame()
+
+    start = days.min().normalize()
+    end = days.max().normalize()
+    all_days = pd.date_range(start=start, end=end, freq="D")
+    trained = set(days.dt.date)
+
+    calendar = pd.DataFrame({"date": all_days})
+    calendar["week"] = calendar["date"].dt.to_period("W-SUN").apply(lambda value: value.start_time.date())
+    calendar["day"] = calendar["date"].dt.day_name().str[:3]
+    calendar["trained"] = calendar["date"].dt.date.apply(lambda value: "Y" if value in trained else "")
+
+    day_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    matrix = calendar.pivot(index="week", columns="day", values="trained").fillna("")
+    return matrix.reindex(columns=day_order, fill_value="")
+
+
 def format_set_target(row: pd.Series) -> str:
     sets = "?" if pd.isna(row["sets"]) else f"{row['sets']:.0f}"
     reps = "?" if pd.isna(row["reps"]) else f"{row['reps']:.0f}"

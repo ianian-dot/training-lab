@@ -92,6 +92,18 @@ The app maps each exercise to weighted target muscles. For example:
 
 The dashboard uses this to estimate target sets per muscle over the last 14 days and suggest what looks most due.
 
+## Overall Dashboard
+
+The Dashboard tab includes higher-level training consistency metrics:
+
+- total gym sessions since the first logged workout
+- latest gym session date
+- average gym sessions per week
+- average and longest rest days between sessions
+- Monday-to-Sunday training calendar
+- weekly gym session bar chart
+- estimated gym cost per session using your monthly fee
+
 ## Weight And Load Logic
 
 `weight_kg` is the number you entered. `load_kg` is the calculated training load used for volume and estimated 1RM.

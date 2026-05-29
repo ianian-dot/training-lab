@@ -9,8 +9,13 @@ from .analytics import (
     build_muscle_summary,
     build_muscle_target_table,
     build_next_muscle_suggestions,
+    calendar_matrix,
+    cost_summary,
     format_current_target,
     format_set_target,
+    rest_day_summary,
+    session_days,
+    weekly_session_counts,
 )
 from .config import (
     EXERCISES,
@@ -283,6 +288,56 @@ def render_dashboard(df: pd.DataFrame) -> None:
     df = df.dropna(subset=["date"]).sort_values("date")
     latest_day = df["date"].max()
     recent = df[df["date"] >= latest_day - pd.Timedelta(days=30)]
+    days = session_days(df)
+    rest = rest_day_summary(df)
+
+    st.markdown("**Overall training dashboard**")
+    monthly_fee = st.number_input(
+        "Monthly gym cost",
+        min_value=0.0,
+        max_value=1000.0,
+        value=110.0,
+        step=5.0,
+        help="Used only for cost-per-session estimates.",
+    )
+    cost = cost_summary(df, monthly_fee)
+
+    first_day = days.min().strftime("%b %d, %Y") if not days.empty else "-"
+    latest_session = days.max().strftime("%b %d, %Y") if not days.empty else "-"
+    weekly_counts = weekly_session_counts(df)
+    avg_sessions_week = weekly_counts["sessions"].mean() if not weekly_counts.empty else 0
+
+    overview_cols = st.columns(5)
+    overview_cols[0].metric("Sessions", int(rest["sessions"]), f"since {first_day}")
+    overview_cols[1].metric("Latest session", latest_session)
+    overview_cols[2].metric("Avg / week", f"{avg_sessions_week:.1f}")
+    avg_rest = rest["avg_rest_days"]
+    overview_cols[3].metric("Avg rest days", "-" if avg_rest is None else f"{avg_rest:.1f}")
+    cost_per_session = cost["cost_per_session"]
+    overview_cols[4].metric("Cost / session", "-" if cost_per_session is None else f"${cost_per_session:.2f}")
+
+    detail_cols = st.columns(3)
+    detail_cols[0].metric("Covered months", int(cost["months"]))
+    detail_cols[1].metric("Est. total gym cost", f"${cost['total_cost']:.0f}")
+    longest_rest = rest["longest_rest_days"]
+    detail_cols[2].metric("Longest rest", "-" if longest_rest is None else f"{longest_rest} days")
+
+    trend_col, calendar_col = st.columns([1, 1.2])
+    with trend_col:
+        st.markdown("**Gym sessions per week**")
+        if weekly_counts.empty:
+            st.info("Log a session to see weekly frequency.")
+        else:
+            st.bar_chart(weekly_counts, x="week_start", y="sessions", use_container_width=True)
+
+    with calendar_col:
+        st.markdown("**Training calendar**")
+        calendar = calendar_matrix(df)
+        if calendar.empty:
+            st.info("Log a session to see the calendar.")
+        else:
+            st.dataframe(calendar, use_container_width=True)
+            st.caption("Y = at least one gym session that day.")
 
     cols = st.columns(4)
     cols[0].metric("Workout days", df["date"].dt.date.nunique())
