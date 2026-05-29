@@ -33,6 +33,12 @@ python3 -m streamlit run app.py
 
 Seed workout data is stored in `data/workouts.csv`. The old Google Form responses are snapshotted in `data/legacy_google_form.csv`, and the app reads that file automatically.
 
+The current live Google Form response sheet is:
+
+```text
+https://docs.google.com/spreadsheets/d/1ACYA_h3NJOSIKsNDp84xlZqT0Tahg8UxFg_JJ0h5fd8/edit
+```
+
 ## Google Form logging
 
 The gym-friendly workflow is:
@@ -42,6 +48,8 @@ The gym-friendly workflow is:
 3. The form writes to a linked Google Sheet.
 4. Paste the new sheet URL into the dashboard sidebar.
 5. The dashboard combines the seed CSV, legacy form CSV, and new Google Sheet.
+
+The app does not physically append Google Sheet rows into the CSV during normal use. Instead, every refresh reads each source, normalises them into the same schema, combines them in memory, and deduplicates obvious repeats. This keeps the old records preserved separately while letting the new form become the live source from now on.
 
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
 

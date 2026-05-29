@@ -6,6 +6,22 @@ The form has an optional `Date` field. If you leave it blank, the dashboard uses
 
 The old Google Form responses are preserved in `data/legacy_google_form.csv`. The dashboard reads that file automatically, then reads the new Google Sheet URL you paste into the sidebar.
 
+The current live response sheet is:
+
+```text
+https://docs.google.com/spreadsheets/d/1ACYA_h3NJOSIKsNDp84xlZqT0Tahg8UxFg_JJ0h5fd8/edit
+```
+
+The dashboard combines data at runtime:
+
+```text
+data/workouts.csv
++ data/legacy_google_form.csv
++ current live Google Sheet
+```
+
+Those sources stay separate on disk; the combined dataset exists inside the app after it has read and normalised them.
+
 ## Steps
 
 1. Go to https://script.google.com.
