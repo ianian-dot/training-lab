@@ -2,6 +2,8 @@
 
 Use `google_form_creator.gs` to create a fresh Google Form and linked Google Sheet. The form records one gym session per submission, with up to 6 exercise blocks.
 
+The form has an optional `Date` field. If you leave it blank, the dashboard uses Google Forms' automatic `Timestamp` as the workout date.
+
 The old Google Form responses are preserved in `data/legacy_google_form.csv`. The dashboard reads that file automatically, then reads the new Google Sheet URL you paste into the sidebar.
 
 ## Steps
@@ -37,11 +39,13 @@ The dashboard maps the Google Form column names into its internal workout schema
 
 The new form's exercise dropdown is grouped with labels like `Push / Bench press` and `Pull / Lat pulldown` so it is easier to scan on a phone. The app strips the group prefix and stores the clean exercise name.
 
+For bench press and incline bench press, selecting `per side` means the dashboard calculates load as `20kg bar + 2 x entered side weight`. For machine or dumbbell-style entries, `per side` or `per hand` is treated as `2 x entered weight`.
+
 If you submit `Later update only` with no exercises, the app creates a zero-set `Session update` row. This lets you add body weight, protein, calories, heart rate, or notes later without disrupting the workout logging flow.
 
 Older entries that used `Other exercise` are detected by keyword. For example:
 
 - `inclined bench` -> `Incline bench press`
-- `hammer curl` -> `Bicep hammer curl`
+- `hammer curl` -> `Hammer curl`
 - `leg press calves` -> `Leg press calf raise`
 - `stationary bike` -> `Stationary bike`

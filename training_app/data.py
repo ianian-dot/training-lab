@@ -1,0 +1,360 @@
+from __future__ import annotations
+
+from datetime import date
+from urllib.parse import parse_qs, urlparse
+
+import pandas as pd
+import streamlit as st
+
+from .config import (
+    BARBELL_PER_SIDE_EXERCISES,
+    BARBELL_WEIGHT_KG,
+    COLUMNS,
+    COLUMN_ALIASES,
+    DATA_DIR,
+    EXERCISES,
+    LEGACY_FORM_PATH,
+    WORKOUTS_PATH,
+)
+
+def canonical_label(value: object) -> str:
+    return str(value).strip().lower()
+
+
+def row_value(row: pd.Series, lookup: dict[str, str], *labels: str) -> object:
+    for label in labels:
+        column = lookup.get(canonical_label(label))
+        if column is not None:
+            return row.get(column)
+    return None
+
+
+def first_filled(*values: object) -> object:
+    for value in values:
+        if is_filled(value):
+            return value
+    return None
+
+
+def is_filled(value: object) -> bool:
+    if pd.isna(value):
+        return False
+    return str(value).strip() != ""
+
+
+def detect_exercise_name(value: object) -> str:
+    if not is_filled(value):
+        return ""
+
+    raw = str(value).strip()
+    if " / " in raw:
+        possible_exercise = raw.split(" / ", 1)[1].strip()
+        if possible_exercise:
+            raw = possible_exercise
+
+    normalized = canonical_label(raw).replace("-", " ")
+    compact = " ".join(normalized.split())
+
+    if ("calf" in compact or "calves" in compact) and "leg press" in compact:
+        return "Leg press calf raise"
+    if ("calf" in compact or "calves" in compact) and "press" in compact:
+        return "Leg press calf raise"
+    if "calve lag press" in compact or "calf leg press" in compact:
+        return "Leg press calf raise"
+    if "leg press" in compact:
+        return "Leg press"
+    if "hammer" in compact and ("curl" in compact or "bicep" in compact):
+        return "Hammer curl"
+    if "incline" in compact and ("bench" in compact or "press" in compact):
+        return "Incline bench press"
+    if "inclined" in compact and ("bench" in compact or "press" in compact):
+        return "Incline bench press"
+    if "stationary bike" in compact or "exercise bike" in compact:
+        return "Stationary bike"
+    if "cycling" in compact:
+        return "Cycling"
+
+    for exercise in EXERCISES:
+        if canonical_label(exercise) == compact:
+            return exercise
+
+    return raw
+
+
+def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
+    lookup = {canonical_label(column): column for column in df.columns}
+    has_multi_exercise_columns = any(canonical_label(f"Exercise {index}") in lookup for index in range(1, 7))
+    if not has_multi_exercise_columns:
+        return df
+
+    rows = []
+    for _, form_row in df.iterrows():
+        entry_type = row_value(form_row, lookup, "Entry type")
+        workout_date = first_filled(
+            row_value(form_row, lookup, "Date", "Workout date"),
+            row_value(form_row, lookup, "Timestamp"),
+        )
+        session_fields = {
+            "date": workout_date,
+            "start_time": row_value(form_row, lookup, "Start time"),
+            "session_type": row_value(form_row, lookup, "Session", "Session type", "Entry type"),
+            "duration_min": row_value(form_row, lookup, "Duration min", "Duration (min)"),
+            "calories": row_value(form_row, lookup, "Calories"),
+            "avg_heart_rate": row_value(form_row, lookup, "Avg heart rate", "Average heart rate"),
+            "max_heart_rate": row_value(form_row, lookup, "Max heart rate"),
+            "body_weight_kg": row_value(form_row, lookup, "Body weight kg", "Body weight (kg)"),
+            "protein_taken": row_value(form_row, lookup, "Protein taken", "Took protein"),
+            "protein_grams": row_value(form_row, lookup, "Protein grams"),
+            "energy": row_value(form_row, lookup, "Energy"),
+            "motivation": row_value(form_row, lookup, "Motivation"),
+            "session_quality": row_value(form_row, lookup, "Session quality", "Gym session quality"),
+            "productivity": row_value(form_row, lookup, "Productivity"),
+            "sleep_hours": row_value(form_row, lookup, "Sleep hours", "Sleep (hours)"),
+            "feeling": row_value(form_row, lookup, "Feeling", "How I am feeling", "How im feeling"),
+        }
+
+        session_notes = row_value(form_row, lookup, "Session notes", "Notes")
+        row_count_before = len(rows)
+        for index in range(1, 7):
+            exercise = row_value(form_row, lookup, f"Exercise {index}")
+            other_exercise = row_value(form_row, lookup, f"Other exercise {index}")
+            if is_filled(other_exercise):
+                exercise = other_exercise
+
+            if not is_filled(exercise):
+                continue
+
+            exercise_name = detect_exercise_name(exercise)
+            if exercise_name.lower() == "other":
+                continue
+
+            muscle_group = row_value(form_row, lookup, f"Muscle group {index}")
+            if not is_filled(muscle_group):
+                muscle_group = EXERCISES.get(exercise_name, "Full body")
+
+            exercise_notes = row_value(form_row, lookup, f"Exercise notes {index}", f"Notes {index}")
+            notes = " | ".join(
+                str(note).strip()
+                for note in [exercise_notes, session_notes]
+                if is_filled(note)
+            )
+
+            rows.append(
+                {
+                    **session_fields,
+                    "exercise": exercise_name,
+                    "muscle_group": muscle_group,
+                    "sets": row_value(form_row, lookup, f"Sets {index}"),
+                    "reps": row_value(form_row, lookup, f"Reps {index}"),
+                    "weight_kg": row_value(form_row, lookup, f"Weight kg {index}", f"Weight (kg) {index}"),
+                    "weight_basis": row_value(form_row, lookup, f"Weight basis {index}"),
+                    "rpe": row_value(form_row, lookup, f"RPE {index}"),
+                    "notes": notes,
+                }
+            )
+
+        has_session_update = any(
+            is_filled(session_fields[field])
+            for field in [
+                "duration_min",
+                "calories",
+                "avg_heart_rate",
+                "max_heart_rate",
+                "body_weight_kg",
+                "protein_taken",
+                "protein_grams",
+                "energy",
+                "motivation",
+                "session_quality",
+                "productivity",
+                "sleep_hours",
+                "feeling",
+            ]
+        )
+        no_exercises_added = len(rows) == row_count_before
+        if no_exercises_added and has_session_update:
+            notes = " | ".join(
+                str(note).strip()
+                for note in [entry_type, session_notes]
+                if is_filled(note)
+            )
+            rows.append(
+                {
+                    **session_fields,
+                    "session_type": (
+                        session_fields["session_type"]
+                        if is_filled(session_fields["session_type"])
+                        else "Session update"
+                    ),
+                    "exercise": "Session update",
+                    "muscle_group": "Recovery",
+                    "sets": None,
+                    "reps": None,
+                    "weight_kg": None,
+                    "weight_basis": None,
+                    "rpe": None,
+                    "notes": notes,
+                }
+            )
+
+    return pd.DataFrame(rows, columns=COLUMNS)
+
+
+def ensure_data_file() -> None:
+    DATA_DIR.mkdir(exist_ok=True)
+    if WORKOUTS_PATH.exists():
+        return
+
+    pd.DataFrame(
+        [
+            {
+                "date": date.today().isoformat(),
+                "start_time": "18:30",
+                "session_type": "Upper",
+                "exercise": "Bench press",
+                "muscle_group": "Chest",
+                "sets": 4,
+                "reps": 8,
+                "weight_kg": 40.0,
+                "weight_basis": "total",
+                "rpe": 7,
+                "duration_min": 60,
+                "calories": 0,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "body_weight_kg": None,
+                "protein_taken": None,
+                "protein_grams": None,
+                "energy": 7,
+                "motivation": None,
+                "session_quality": None,
+                "productivity": None,
+                "sleep_hours": 7.0,
+                "feeling": None,
+                "notes": "Sample row. Replace this with your own workout.",
+            }
+        ],
+        columns=COLUMNS,
+    ).to_csv(WORKOUTS_PATH, index=False)
+
+
+def estimate_one_rep_max(row: pd.Series) -> float:
+    reps = row.get("reps")
+    weight = row.get("load_kg", row.get("weight_kg"))
+    if pd.isna(reps) or pd.isna(weight) or reps <= 0 or weight <= 0:
+        return 0.0
+    return round(float(weight) * (1 + float(reps) / 30), 1)
+
+
+def calculate_load_kg(row: pd.Series) -> float:
+    weight = row.get("weight_kg")
+    if pd.isna(weight):
+        return 0.0
+
+    weight = float(weight)
+    basis = str(row.get("weight_basis", "")).strip().lower()
+    exercise = str(row.get("exercise", "")).strip()
+
+    if basis == "per side" and exercise in BARBELL_PER_SIDE_EXERCISES:
+        return BARBELL_WEIGHT_KG + weight * 2
+    if basis in {"per hand", "per side", "each arm"}:
+        return weight * 2
+    return weight
+
+
+def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
+    df = expand_multi_exercise_form(df.copy())
+    df.columns = [COLUMN_ALIASES.get(str(column).strip().lower(), str(column).strip()) for column in df.columns]
+
+    if "other_exercise" in df.columns:
+        other = df["other_exercise"].fillna("").astype(str).str.strip()
+        exercise = df.get("exercise", pd.Series("", index=df.index)).fillna("").astype(str).str.strip()
+        df["exercise"] = exercise.where(other == "", other)
+
+    for column in COLUMNS:
+        if column not in df.columns:
+            df[column] = None
+
+    df = df[COLUMNS]
+    df["exercise"] = df["exercise"].apply(detect_exercise_name)
+    missing_group = df["muscle_group"].isna() | (df["muscle_group"].fillna("").astype(str).str.strip() == "")
+    df.loc[missing_group, "muscle_group"] = df.loc[missing_group, "exercise"].map(EXERCISES).fillna("Full body")
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    for column in [
+        "sets",
+        "reps",
+        "weight_kg",
+        "rpe",
+        "duration_min",
+        "calories",
+        "avg_heart_rate",
+        "max_heart_rate",
+        "body_weight_kg",
+        "protein_grams",
+        "energy",
+        "motivation",
+        "session_quality",
+        "productivity",
+        "sleep_hours",
+    ]:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+
+    df["load_kg"] = df.apply(calculate_load_kg, axis=1)
+    df["volume_kg"] = df["sets"].fillna(0) * df["reps"].fillna(0) * df["load_kg"].fillna(0)
+    df["estimated_1rm_kg"] = df.apply(estimate_one_rep_max, axis=1)
+    return df
+
+
+@st.cache_data(ttl=60)
+def read_google_sheet_csv(sheet_url: str) -> pd.DataFrame:
+    return pd.read_csv(to_google_sheet_csv_url(sheet_url))
+
+
+def to_google_sheet_csv_url(sheet_url: str) -> str:
+    if "export?format=csv" in sheet_url:
+        return sheet_url
+
+    parsed = urlparse(sheet_url)
+    path_parts = [part for part in parsed.path.split("/") if part]
+    try:
+        spreadsheet_id = path_parts[path_parts.index("d") + 1]
+    except (ValueError, IndexError):
+        return sheet_url
+
+    query = parse_qs(parsed.query)
+    fragment_query = parse_qs(parsed.fragment)
+    gid = query.get("gid", fragment_query.get("gid", ["0"]))[0]
+    return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
+
+
+def load_workouts(csv_url: str | None = None) -> pd.DataFrame:
+    ensure_data_file()
+    frames = [normalize_workouts(pd.read_csv(WORKOUTS_PATH))]
+
+    if LEGACY_FORM_PATH.exists():
+        try:
+            frames.append(normalize_workouts(pd.read_csv(LEGACY_FORM_PATH)))
+        except Exception as exc:
+            st.sidebar.error(f"Could not load legacy Google Form CSV: {exc}")
+
+    if csv_url:
+        try:
+            frames.append(normalize_workouts(read_google_sheet_csv(csv_url)))
+        except Exception as exc:
+            st.sidebar.error(f"Could not load Google Sheet CSV: {exc}")
+            st.sidebar.info("Make sure the sheet is shared as 'Anyone with the link can view' or published to the web.")
+
+    combined = pd.concat(frames, ignore_index=True)
+    dedupe_columns = ["date", "exercise", "sets", "reps", "weight_kg", "weight_basis", "notes"]
+    return combined.drop_duplicates(subset=dedupe_columns, keep="last").reset_index(drop=True)
+
+
+def append_workout(row: dict) -> None:
+    ensure_data_file()
+    df = pd.read_csv(WORKOUTS_PATH)
+    for column in COLUMNS:
+        if column not in df.columns:
+            df[column] = None
+    df = df[COLUMNS]
+    df = pd.concat([df, pd.DataFrame([row], columns=COLUMNS)], ignore_index=True)
+    df.to_csv(WORKOUTS_PATH, index=False)

@@ -14,7 +14,7 @@ python3 -m streamlit run app.py
 - Seated lateral raise machine
 - Barbell bicep curl
 - Dumbbell bicep curl
-- Bicep hammer curl
+- Hammer curl
 - Single-arm shoulder raise
 - Seated shoulder press
 - Lat pulldown
@@ -80,9 +80,28 @@ The app maps each exercise to weighted target muscles. For example:
 
 The dashboard uses this to estimate target sets per muscle over the last 14 days and suggest what looks most due.
 
+## Weight And Load Logic
+
+`weight_kg` is the number you entered. `load_kg` is the calculated training load used for volume and estimated 1RM.
+
+- `total`: load is the entered weight
+- `per hand`: load is entered weight x 2
+- `per side` for bench press and incline bench press: load is 20kg barbell + entered weight x 2
+- `per side` for machines such as leg press: load is entered weight x 2
+- `bodyweight`: load is the entered weight, usually 0 unless you choose to track added weight
+
+## Code Structure
+
+- `app.py`: small Streamlit entry point and tab wiring
+- `training_app/config.py`: exercises, muscle mappings, file paths, and schema constants
+- `training_app/data.py`: CSV/Google Sheet loading, Google Form normalisation, date fallback, and calculated load
+- `training_app/analytics.py`: volume, estimated 1RM, muscle target sets, and next-session scoring
+- `training_app/visualizations.py`: body heatmap and muscle coverage visuals
+- `training_app/views.py`: Streamlit screens and tab content
+
 ## Visualization ideas
 
-The current app uses a dependency-free muscle coverage grid because it works well on mobile and is easy to maintain.
+The current app uses a dependency-free muscle coverage grid and a stylized body heatmap because they work well on mobile and are easy to maintain.
 
 More interesting next options:
 

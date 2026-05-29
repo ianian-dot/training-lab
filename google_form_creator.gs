@@ -14,7 +14,7 @@ function createTrainingLabForm() {
     'Pull / Rear delt machine',
     'Pull / Barbell bicep curl',
     'Pull / Dumbbell bicep curl',
-    'Pull / Bicep hammer curl',
+    'Pull / Hammer curl',
     'Legs / Leg extension',
     'Legs / Leg press',
     'Legs / Leg press calf raise',
@@ -44,7 +44,9 @@ function createTrainingLabForm() {
     .setChoiceValues(['Workout session', 'Later update only'])
     .setRequired(true);
 
-  form.addDateItem().setTitle('Date').setRequired(true);
+  form.addDateItem()
+    .setTitle('Date')
+    .setHelpText('Optional. Leave blank to use the automatic submission timestamp.');
   form.addTimeItem().setTitle('Start time');
 
   form.addListItem()
