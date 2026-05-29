@@ -81,6 +81,47 @@ def detect_exercise_name(value: object) -> str:
     return raw
 
 
+def start_time_from_parts(hour: object, minute: object) -> str | None:
+    if not is_filled(hour):
+        return None
+
+    try:
+        hour_number = int(float(str(hour).strip()))
+    except ValueError:
+        return None
+
+    minute_number = 0
+    if is_filled(minute):
+        try:
+            minute_number = int(float(str(minute).strip()))
+        except ValueError:
+            minute_number = 0
+
+    if 0 <= hour_number <= 7:
+        hour_number += 12
+    if not 0 <= hour_number <= 23:
+        return None
+
+    minute_number = min(max(minute_number, 0), 59)
+    return f"{hour_number:02d}:{minute_number:02d}"
+
+
+def normalize_start_time(value: object) -> object:
+    if not is_filled(value):
+        return None
+
+    parsed = pd.to_datetime(str(value).strip(), errors="coerce")
+    if pd.isna(parsed):
+        return value
+
+    hour = int(parsed.hour)
+    minute = int(parsed.minute)
+    if 0 <= hour <= 7:
+        hour += 12
+
+    return f"{hour:02d}:{minute:02d}"
+
+
 def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
     lookup = {canonical_label(column): column for column in df.columns}
     has_multi_exercise_columns = any(canonical_label(f"Exercise {index}") in lookup for index in range(1, 7))
@@ -94,9 +135,16 @@ def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
             row_value(form_row, lookup, "Date", "Workout date"),
             row_value(form_row, lookup, "Timestamp"),
         )
+        start_time = first_filled(
+            start_time_from_parts(
+                row_value(form_row, lookup, "Start hour (24h)", "Start hour", "Workout hour"),
+                row_value(form_row, lookup, "Start minute", "Workout minute"),
+            ),
+            row_value(form_row, lookup, "Start time"),
+        )
         session_fields = {
             "date": workout_date,
-            "start_time": row_value(form_row, lookup, "Start time"),
+            "start_time": start_time,
             "session_type": row_value(form_row, lookup, "Session", "Session type", "Entry type"),
             "duration_min": row_value(form_row, lookup, "Duration min", "Duration (min)"),
             "calories": row_value(form_row, lookup, "Calories"),
@@ -277,6 +325,7 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df[COLUMNS]
     df["exercise"] = df["exercise"].apply(detect_exercise_name)
+    df["start_time"] = df["start_time"].apply(normalize_start_time)
     missing_group = df["muscle_group"].isna() | (df["muscle_group"].fillna("").astype(str).str.strip() == "")
     df.loc[missing_group, "muscle_group"] = df.loc[missing_group, "exercise"].map(EXERCISES).fillna("Full body")
     df["date"] = pd.to_datetime(df["date"], errors="coerce")

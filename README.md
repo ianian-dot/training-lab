@@ -51,6 +51,8 @@ The gym-friendly workflow is:
 
 The app does not physically append Google Sheet rows into the CSV during normal use. Instead, every refresh reads each source, normalises them into the same schema, combines them in memory, and deduplicates obvious repeats. This keeps the old records preserved separately while letting the new form become the live source from now on.
 
+The form records start time with 24-hour dropdowns. During import, any old 12-hour entries that look like middle-of-the-night gym sessions are shifted into daytime/evening time.
+
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
 
 The Google Sheet stores each session as one wide row, with columns like `Exercise 1`, `Sets 1`, `Exercise 2`, `Sets 2`, and so on. The dashboard converts those exercise blocks into one long-format analysis row per exercise.

@@ -4,6 +4,10 @@ Use `google_form_creator.gs` to create a fresh Google Form and linked Google She
 
 The form has an optional `Date` field. If you leave it blank, the dashboard uses Google Forms' automatic `Timestamp` as the workout date.
 
+The form uses `Start hour (24h)` and `Start minute` instead of a 12-hour time picker. If older responses contain a time like `4:00 AM`, the dashboard assumes you meant daytime gymming and normalises it to `16:00`.
+
+If you already created the current form, run `addTimeDropdownsToExistingTrainingLabForm` once in Apps Script to add those dropdowns. You can then ignore the old `Start time` picker, or manually move/delete it in the Google Form editor.
+
 The old Google Form responses are preserved in `data/legacy_google_form.csv`. The dashboard reads that file automatically, then reads the new Google Sheet URL you paste into the sidebar.
 
 The current live response sheet is:

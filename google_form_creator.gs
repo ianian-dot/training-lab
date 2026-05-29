@@ -1,4 +1,6 @@
 function createTrainingLabForm() {
+  const startHours = ['08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'];
+  const startMinutes = ['00', '15', '30', '45'];
   const exercises = [
     'Push / Bench press',
     'Push / Incline bench press',
@@ -47,7 +49,14 @@ function createTrainingLabForm() {
   form.addDateItem()
     .setTitle('Date')
     .setHelpText('Optional. Leave blank to use the automatic submission timestamp.');
-  form.addTimeItem().setTitle('Start time');
+  form.addListItem()
+    .setTitle('Start hour (24h)')
+    .setHelpText('Use 24-hour time. Example: 13 for 1pm, 18 for 6pm.')
+    .setChoiceValues(startHours);
+
+  form.addListItem()
+    .setTitle('Start minute')
+    .setChoiceValues(startMinutes);
 
   form.addListItem()
     .setTitle('Session')
@@ -112,4 +121,26 @@ function createTrainingLabForm() {
   Logger.log('Form edit URL: ' + form.getEditUrl());
   Logger.log('Form submit URL: ' + form.getPublishedUrl());
   Logger.log('Response sheet URL: ' + sheet.getUrl());
+}
+
+function addTimeDropdownsToExistingTrainingLabForm() {
+  const form = FormApp.openById('1ijRaekaR0-3D6FAvIIsMOTJJrDt3JH2wa-M6DOHHQ_M');
+  const existingTitles = form.getItems().map(item => item.getTitle());
+  const startHours = ['08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'];
+  const startMinutes = ['00', '15', '30', '45'];
+
+  if (!existingTitles.includes('Start hour (24h)')) {
+    form.addListItem()
+      .setTitle('Start hour (24h)')
+      .setHelpText('Use 24-hour time. Example: 13 for 1pm, 18 for 6pm.')
+      .setChoiceValues(startHours);
+  }
+
+  if (!existingTitles.includes('Start minute')) {
+    form.addListItem()
+      .setTitle('Start minute')
+      .setChoiceValues(startMinutes);
+  }
+
+  Logger.log('Updated form edit URL: ' + form.getEditUrl());
 }
