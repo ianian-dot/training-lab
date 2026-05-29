@@ -120,12 +120,12 @@ The Dashboard tab includes higher-level training consistency metrics:
 - `training_app/config.py`: exercises, muscle mappings, file paths, and schema constants
 - `training_app/data.py`: CSV/Google Sheet loading, Google Form normalisation, date fallback, and calculated load
 - `training_app/analytics.py`: volume, estimated 1RM, muscle target sets, and next-session scoring
-- `training_app/visualizations.py`: body heatmap and muscle coverage visuals
+- `training_app/visualizations.py`: muscle coverage visuals
 - `training_app/views.py`: Streamlit screens and tab content
 
 ## Visualization ideas
 
-The current app uses a dependency-free muscle coverage grid and a stylized body heatmap because they work well on mobile and are easy to maintain.
+The current app uses a dependency-free muscle coverage grid because it works well on mobile and is easy to maintain.
 
 More interesting next options:
 

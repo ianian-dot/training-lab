@@ -11,7 +11,7 @@ Training Lab is a personal workout analytics dashboard built with Streamlit and 
 - Calculates `load_kg` from the entered weight, including 20kg barbell logic for bench and incline bench.
 - Maps exercises to weighted target muscles so the dashboard can show what has been trained recently.
 - Provides a gym-friendly view for deciding what to train next based on recency and recent target sets.
-- Visualises progress over time using load, volume, estimated 1RM, muscle target trends, and a body heatmap.
+- Visualises progress over time using load, volume, estimated 1RM, muscle target trends, and muscle coverage.
 
 ## Why It Is Useful
 
@@ -41,7 +41,7 @@ The project solves a real personal workflow: logging workouts quickly during a g
 - `training_app/config.py`: exercise lists, muscle mappings, file paths, and schema constants.
 - `training_app/data.py`: Google Sheet reading, CSV loading, form normalisation, date fallback, and calculated load.
 - `training_app/analytics.py`: volume, estimated 1RM, muscle target sets, recency, and next-target calculations.
-- `training_app/visualizations.py`: muscle coverage tiles and body heatmap rendering.
+- `training_app/visualizations.py`: muscle coverage tile rendering.
 - `training_app/views.py`: Streamlit tabs and user-facing screens.
 
 ## Pickleball, Football, Sleep, And Mood
