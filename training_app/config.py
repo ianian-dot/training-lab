@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent.parent
@@ -7,7 +8,7 @@ DATA_DIR = APP_DIR / "data"
 WORKOUTS_PATH = DATA_DIR / "workouts.csv"
 LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
-DEFAULT_GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1ACYA_h3NJOSIKsNDp84xlZqT0Tahg8UxFg_JJ0h5fd8/edit"
+DEFAULT_GOOGLE_SHEET_URL = os.environ.get("TRAINING_LAB_GOOGLE_SHEET_URL", "")
 BARBELL_WEIGHT_KG = 20.0
 BARBELL_PER_SIDE_EXERCISES = {
     "Bench press",

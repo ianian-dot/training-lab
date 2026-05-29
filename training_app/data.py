@@ -4,6 +4,7 @@ from datetime import date
 from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
+from pandas.errors import EmptyDataError
 import streamlit as st
 
 from .config import (
@@ -356,7 +357,10 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
 
 @st.cache_data(ttl=60)
 def read_google_sheet_csv(sheet_url: str) -> pd.DataFrame:
-    return pd.read_csv(to_google_sheet_csv_url(sheet_url))
+    try:
+        return pd.read_csv(to_google_sheet_csv_url(sheet_url))
+    except EmptyDataError:
+        return pd.DataFrame()
 
 
 def to_google_sheet_csv_url(sheet_url: str) -> str:

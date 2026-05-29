@@ -10,11 +10,7 @@ If you already created the current form, run `addTimeDropdownsToExistingTraining
 
 The old Google Form responses are preserved in `data/legacy_google_form.csv`. The dashboard reads that file automatically, then reads the new Google Sheet URL you paste into the sidebar.
 
-The current live response sheet is:
-
-```text
-https://docs.google.com/spreadsheets/d/1ACYA_h3NJOSIKsNDp84xlZqT0Tahg8UxFg_JJ0h5fd8/edit
-```
+The current live response sheet URL is configured outside Git using `.streamlit/secrets.toml`, Streamlit Community Cloud secrets, or the `TRAINING_LAB_GOOGLE_SHEET_URL` environment variable.
 
 The dashboard combines data at runtime:
 

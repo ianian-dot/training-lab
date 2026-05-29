@@ -33,11 +33,7 @@ python3 -m streamlit run app.py
 
 Seed workout data is stored in `data/workouts.csv`. The old Google Form responses are snapshotted in `data/legacy_google_form.csv`, and the app reads that file automatically.
 
-The current live Google Form response sheet is:
-
-```text
-https://docs.google.com/spreadsheets/d/1ACYA_h3NJOSIKsNDp84xlZqT0Tahg8UxFg_JJ0h5fd8/edit
-```
+The current live Google Form response sheet is configured outside Git using either Streamlit secrets or an environment variable.
 
 ## Google Form logging
 
@@ -65,7 +61,13 @@ You can also submit a later update with no exercises, for example body weight or
 
 For Streamlit to read the sheet, share it as `Anyone with the link can view` or publish it to the web.
 
-On Streamlit Community Cloud, add the new sheet URL as a secret named `google_sheet_url` so the deployed app reads it by default.
+For local Streamlit, create `.streamlit/secrets.toml`:
+
+```toml
+google_sheet_url = "https://docs.google.com/spreadsheets/d/..."
+```
+
+For Streamlit Community Cloud, add the same value as a secret named `google_sheet_url`. You can also set an environment variable named `TRAINING_LAB_GOOGLE_SHEET_URL`.
 
 ## Muscle target logic
 

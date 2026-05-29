@@ -5,7 +5,7 @@ Training Lab is a personal workout analytics dashboard built with Streamlit and 
 ## What It Does
 
 - Logs gym exercises with sets, reps, entered weight, weight basis, RPE, and notes.
-- Reads multiple data sources: seed CSV, frozen legacy Google Form export, and a new live Google Sheet.
+- Reads multiple data sources: seed CSV, frozen legacy Google Form export, and a live Google Sheet configured outside Git.
 - Converts Google Form responses from wide format into long-format exercise rows for analysis.
 - Normalises messy exercise names from older `Other exercise` entries, such as inclined bench, hammer curls, and leg press calves.
 - Calculates `load_kg` from the entered weight, including 20kg barbell logic for bench and incline bench.
