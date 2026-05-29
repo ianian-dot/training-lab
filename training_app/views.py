@@ -11,6 +11,7 @@ from .analytics import (
     build_next_muscle_suggestions,
     calendar_matrix,
     cost_summary,
+    current_month_summary,
     format_current_target,
     format_set_target,
     rest_day_summary,
@@ -300,7 +301,33 @@ def render_dashboard(df: pd.DataFrame) -> None:
         step=5.0,
         help="Used only for cost-per-session estimates.",
     )
+    target_cost = st.number_input(
+        "Target cost per session",
+        min_value=1.0,
+        max_value=100.0,
+        value=10.0,
+        step=1.0,
+        help="Used to calculate how many gym sessions make your monthly membership feel efficient.",
+    )
     cost = cost_summary(df, monthly_fee)
+    month = current_month_summary(df, monthly_fee, target_cost)
+
+    st.markdown(f"**This month: {month['month']}**")
+    month_cols = st.columns(5)
+    month_cols[0].metric("Sessions this month", int(month["sessions"]))
+    month_cost = month["cost_per_session"]
+    month_cols[1].metric("Current cost / session", "-" if month_cost is None else f"${month_cost:.2f}")
+    month_cols[2].metric("Target sessions", int(month["target_sessions"]), f"for ${target_cost:.0f}/session")
+    month_cols[3].metric("More to target", int(month["sessions_to_target"]))
+    month_cols[4].metric("Days left in month", int(month["remaining_days"]))
+
+    if month["sessions_to_target"]:
+        st.info(
+            f"{int(month['sessions_to_target'])} more gym session(s) this month would bring the membership "
+            f"to about ${target_cost:.0f} per session."
+        )
+    else:
+        st.success("You have already hit your target cost efficiency for this month.")
 
     first_day = days.min().strftime("%b %d, %Y") if not days.empty else "-"
     latest_session = days.max().strftime("%b %d, %Y") if not days.empty else "-"

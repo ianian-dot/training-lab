@@ -62,6 +62,49 @@ def cost_summary(df: pd.DataFrame, monthly_fee: float) -> dict[str, float | int 
     }
 
 
+def current_month_summary(
+    df: pd.DataFrame,
+    monthly_fee: float,
+    target_cost_per_session: float,
+) -> dict[str, float | int | str | None]:
+    days = session_days(df)
+    if days.empty:
+        return {
+            "month": "-",
+            "sessions": 0,
+            "cost_per_session": None,
+            "target_sessions": 0,
+            "sessions_to_target": 0,
+            "remaining_days": 0,
+            "pace_per_week": None,
+        }
+
+    latest_day = days.max()
+    current_month = latest_day.to_period("M")
+    month_days = days[days.dt.to_period("M") == current_month]
+    sessions = int(len(month_days))
+    cost_per_session = monthly_fee / sessions if sessions and monthly_fee > 0 else None
+    target_sessions = (
+        int(-(-monthly_fee // target_cost_per_session))
+        if monthly_fee > 0 and target_cost_per_session > 0
+        else 0
+    )
+    sessions_to_target = max(target_sessions - sessions, 0)
+    month_end = current_month.end_time.normalize()
+    remaining_days = max(int((month_end - latest_day.normalize()).days), 0)
+    pace_per_week = sessions / max((latest_day.day / 7), 1)
+
+    return {
+        "month": latest_day.strftime("%b %Y"),
+        "sessions": sessions,
+        "cost_per_session": cost_per_session,
+        "target_sessions": target_sessions,
+        "sessions_to_target": sessions_to_target,
+        "remaining_days": remaining_days,
+        "pace_per_week": pace_per_week,
+    }
+
+
 def calendar_matrix(df: pd.DataFrame) -> pd.DataFrame:
     days = session_days(df)
     if days.empty:

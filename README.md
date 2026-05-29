@@ -97,6 +97,9 @@ The dashboard uses this to estimate target sets per muscle over the last 14 days
 The Dashboard tab includes higher-level training consistency metrics:
 
 - total gym sessions since the first logged workout
+- workouts this month
+- current monthly cost per session
+- how many more sessions are needed to hit a target cost per session
 - latest gym session date
 - average gym sessions per week
 - average and longest rest days between sessions
