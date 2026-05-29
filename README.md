@@ -100,6 +100,7 @@ The Dashboard tab includes higher-level training consistency metrics:
 - workouts this month
 - current monthly cost per session
 - how many more sessions are needed to hit a target cost per session
+- latest body weight, protein, calories, duration, heart rate, sleep, and session ratings
 - latest gym session date
 - average gym sessions per week
 - average and longest rest days between sessions

@@ -105,6 +105,34 @@ def current_month_summary(
     }
 
 
+def latest_value(df: pd.DataFrame, column: str) -> dict[str, object]:
+    if column not in df.columns:
+        return {"value": None, "date": None}
+
+    values = df.dropna(subset=["date", column]).copy()
+    if values.empty:
+        return {"value": None, "date": None}
+
+    latest = values.sort_values("date").iloc[-1]
+    return {"value": latest[column], "date": latest["date"]}
+
+
+def latest_body_metrics(df: pd.DataFrame) -> dict[str, dict[str, object]]:
+    fields = [
+        "body_weight_kg",
+        "protein_grams",
+        "calories",
+        "duration_min",
+        "avg_heart_rate",
+        "max_heart_rate",
+        "energy",
+        "motivation",
+        "session_quality",
+        "sleep_hours",
+    ]
+    return {field: latest_value(df, field) for field in fields}
+
+
 def calendar_matrix(df: pd.DataFrame) -> pd.DataFrame:
     days = session_days(df)
     if days.empty:

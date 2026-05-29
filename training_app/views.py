@@ -14,6 +14,7 @@ from .analytics import (
     current_month_summary,
     format_current_target,
     format_set_target,
+    latest_body_metrics,
     rest_day_summary,
     session_days,
     weekly_session_counts,
@@ -328,6 +329,33 @@ def render_dashboard(df: pd.DataFrame) -> None:
         )
     else:
         st.success("You have already hit your target cost efficiency for this month.")
+
+    st.markdown("**Latest body and session context**")
+    latest_metrics = latest_body_metrics(df)
+
+    def metric_label(field: str, suffix: str = "", precision: int = 1) -> str:
+        value = latest_metrics[field]["value"]
+        if pd.isna(value) or value is None:
+            return "-"
+        if isinstance(value, (int, float)):
+            return f"{value:.{precision}f}{suffix}"
+        return f"{value}{suffix}"
+
+    body_cols = st.columns(5)
+    weight_date = latest_metrics["body_weight_kg"]["date"]
+    weight_delta = "-" if pd.isna(weight_date) or weight_date is None else pd.to_datetime(weight_date).strftime("%b %d")
+    body_cols[0].metric("Latest weight", metric_label("body_weight_kg", " kg"), weight_delta)
+    body_cols[1].metric("Latest protein", metric_label("protein_grams", " g", precision=0))
+    body_cols[2].metric("Latest calories", metric_label("calories", " kcal", precision=0))
+    body_cols[3].metric("Latest duration", metric_label("duration_min", " min", precision=0))
+    body_cols[4].metric("Latest avg HR", metric_label("avg_heart_rate", " bpm", precision=0))
+
+    context_cols = st.columns(5)
+    context_cols[0].metric("Max HR", metric_label("max_heart_rate", " bpm", precision=0))
+    context_cols[1].metric("Energy", metric_label("energy", "/10", precision=0))
+    context_cols[2].metric("Motivation", metric_label("motivation", "/10", precision=0))
+    context_cols[3].metric("Session quality", metric_label("session_quality", "/10", precision=0))
+    context_cols[4].metric("Sleep", metric_label("sleep_hours", " h"))
 
     first_day = days.min().strftime("%b %d, %Y") if not days.empty else "-"
     latest_session = days.max().strftime("%b %d, %Y") if not days.empty else "-"
