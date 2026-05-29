@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import pandas as pd
 from pandas.errors import EmptyDataError
@@ -376,7 +376,11 @@ def to_google_sheet_csv_url(sheet_url: str) -> str:
 
     query = parse_qs(parsed.query)
     fragment_query = parse_qs(parsed.fragment)
-    gid = query.get("gid", fragment_query.get("gid", ["0"]))[0]
+    gid = query.get("gid", fragment_query.get("gid", [None]))[0]
+    if gid is None:
+        sheet_name = quote("Form Responses 1")
+        return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+
     return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
 
 
