@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import re
 from urllib.parse import parse_qs, quote, urlparse
 
 import pandas as pd
@@ -125,20 +126,37 @@ def start_time_from_parts(hour: object, minute: object) -> str | None:
     return f"{hour_number:02d}:{minute_number:02d}"
 
 
-def normalize_start_time(value: object) -> object:
+def normalize_start_time_with_validation(value: object) -> tuple[object, str]:
     if not is_filled(value):
-        return None
+        return None, ""
 
-    parsed = pd.to_datetime(str(value).strip(), errors="coerce")
+    raw = str(value).strip()
+    parsed = pd.to_datetime(raw, errors="coerce")
     if pd.isna(parsed):
-        return value
+        return value, "Could not parse start time"
 
     hour = int(parsed.hour)
     minute = int(parsed.minute)
+    raw_lower = raw.lower()
+    has_meridiem = "am" in raw_lower or "pm" in raw_lower
+    has_pm = "pm" in raw_lower
+    has_am = "am" in raw_lower
+    compact_time = re.fullmatch(r"\s*(\d{1,2})(?::(\d{2}))?\s*", raw)
+
+    validation = ""
     if 0 <= hour <= 7:
         hour += 12
+        validation = "Inferred PM from unlikely early-morning gym time"
+    elif has_am and 8 <= hour <= 11:
+        validation = "Check AM time: kept as morning because 8-11am is plausible"
+    elif compact_time and 1 <= hour <= 7:
+        validation = "Inferred PM from 12-hour-looking time"
+    elif compact_time and 8 <= hour <= 11:
+        validation = "Ambiguous 8-11 time: kept as morning; use 20-23 for evening"
+    elif has_pm:
+        validation = "Explicit PM time"
 
-    return f"{hour:02d}:{minute:02d}"
+    return f"{hour:02d}:{minute:02d}", validation
 
 
 def normalize_date(value: object) -> object:
@@ -170,6 +188,7 @@ def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
         session_fields = {
             "date": workout_date,
             "start_time": start_time,
+            "time_validation": None,
             "session_type": row_value(form_row, lookup, "Session", "Session type", "Entry type"),
             "duration_min": row_value(form_row, lookup, "Duration min", "Duration (min)"),
             "calories": row_value(form_row, lookup, "Calories"),
@@ -350,7 +369,9 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df[COLUMNS]
     df["exercise"] = df["exercise"].apply(detect_exercise_name)
-    df["start_time"] = df["start_time"].apply(normalize_start_time)
+    normalized_times = df["start_time"].apply(normalize_start_time_with_validation)
+    df["start_time"] = normalized_times.apply(lambda value: value[0])
+    df["time_validation"] = normalized_times.apply(lambda value: value[1])
     missing_group = df["muscle_group"].isna() | (df["muscle_group"].fillna("").astype(str).str.strip() == "")
     df.loc[missing_group, "muscle_group"] = df.loc[missing_group, "exercise"].map(EXERCISES).fillna("Full body")
     df["date"] = df["date"].apply(normalize_date)

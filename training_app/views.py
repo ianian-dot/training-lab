@@ -33,6 +33,8 @@ from .config import (
     MUSCLE_SECTIONS,
     MUSCLE_TARGETS,
     PER_SIDE_BASE_LOAD_KG,
+    SPORTS_BODY_PART_TARGETS,
+    SPORTS_FORM_SCRIPT_PATH,
     WORKOUTS_PATH,
 )
 from .data import append_workout, canonical_label
@@ -639,6 +641,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
             [
                 "date",
                 "start_time",
+                "time_validation",
                 "session_type",
                 "exercise",
                 "muscle_group",
@@ -753,6 +756,10 @@ def render_setup(csv_url: str | None) -> None:
     st.write("Open the script below in Google Apps Script, run `createTrainingLabForm`, and it will create a fresh Google Form plus linked response sheet.")
     st.code(str(FORM_SCRIPT_PATH), language="text")
 
+    st.markdown("**Create the sports form**")
+    st.write("Use a separate form for pickleball and football so those sessions do not get mixed into lift sets/reps/load.")
+    st.code(str(SPORTS_FORM_SCRIPT_PATH), language="text")
+
     st.markdown("**Connect the sheet**")
     st.write("After responses start coming in, share the new response sheet as viewable by anyone with the link, then paste that new sheet URL into the sidebar.")
     if csv_url:
@@ -781,6 +788,15 @@ def render_data(df: pd.DataFrame) -> None:
     if not export.empty:
         export["date"] = export["date"].dt.strftime("%Y-%m-%d")
     st.dataframe(export, hide_index=True, use_container_width=True)
+
+    if "time_validation" in df.columns:
+        time_checks = df[df["time_validation"].fillna("").astype(str).str.strip() != ""].copy()
+        if not time_checks.empty:
+            st.markdown("**Start time validation**")
+            display = time_checks[["date", "start_time", "time_validation", "exercise", "notes"]].copy()
+            display["date"] = display["date"].dt.strftime("%Y-%m-%d")
+            st.dataframe(display, hide_index=True, use_container_width=True)
+
     st.download_button("Download CSV", WORKOUTS_PATH.read_text(), "workouts.csv", "text/csv")
 
 
@@ -827,3 +843,10 @@ def render_mappings() -> None:
         for muscle, weight in targets.items():
             raw_rows.append({"Exercise": exercise, "Muscle": muscle, "Weight": weight})
     st.dataframe(pd.DataFrame(raw_rows), hide_index=True, use_container_width=True)
+
+    st.markdown("**Sports body-part mapping**")
+    sports_rows = []
+    for sport, targets in SPORTS_BODY_PART_TARGETS.items():
+        for body_part, emphasis in targets.items():
+            sports_rows.append({"Sport": sport, "Body part": body_part, "Emphasis": emphasis})
+    st.dataframe(pd.DataFrame(sports_rows), hide_index=True, use_container_width=True)

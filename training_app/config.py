@@ -8,6 +8,7 @@ DATA_DIR = APP_DIR / "data"
 WORKOUTS_PATH = DATA_DIR / "workouts.csv"
 LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
+SPORTS_FORM_SCRIPT_PATH = APP_DIR / "sports_form_creator.gs"
 DEFAULT_GOOGLE_SHEET_URL = os.environ.get("TRAINING_LAB_GOOGLE_SHEET_URL", "")
 
 # Extra base load added when a machine/barbell lift is logged as "per side".
@@ -230,6 +231,7 @@ ALL_TRACKED_MUSCLES = [muscle for muscles in MUSCLE_SECTIONS.values() for muscle
 COLUMNS = [
     "date",
     "start_time",
+    "time_validation",
     "session_type",
     "exercise",
     "muscle_group",
@@ -294,4 +296,26 @@ COLUMN_ALIASES = {
     "how i am feeling": "feeling",
     "how im feeling": "feeling",
     "notes": "notes",
+}
+
+SPORTS_BODY_PART_TARGETS = {
+    "Pickleball": {
+        "Calves": 0.75,
+        "Quads": 0.65,
+        "Glutes": 0.55,
+        "Hamstrings": 0.45,
+        "Shoulders": 0.45,
+        "Forearms": 0.6,
+        "Core": 0.55,
+        "Cardio": 0.7,
+    },
+    "Football": {
+        "Calves": 0.85,
+        "Quads": 0.85,
+        "Hamstrings": 0.8,
+        "Glutes": 0.7,
+        "Hip flexors": 0.55,
+        "Core": 0.55,
+        "Cardio": 1.0,
+    },
 }

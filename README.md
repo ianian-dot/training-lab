@@ -53,7 +53,11 @@ The app does not physically append Google Sheet rows into the CSV during normal 
 
 The form records start time with 24-hour dropdowns. During import, any old 12-hour entries that look like middle-of-the-night gym sessions are shifted into daytime/evening time.
 
+The app keeps a `time_validation` note when it changes or flags a start time. For example, `3:30 AM` is interpreted as `15:30`, while ambiguous `8:00 AM` to `11:00 AM` entries are kept as morning but shown in the Data tab for review. Going forward, use 24-hour time in the form.
+
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
+
+For pickleball and football, use `sports_form_creator.gs` to create a separate sports form. Sports sessions are tracked separately because they are session-based activities rather than strength rows with sets, reps, and load.
 
 The Google Sheet stores each session as one wide row, with columns like `Exercise 1`, `Sets 1`, `Exercise 2`, `Sets 2`, and so on. The dashboard converts those exercise blocks into one long-format analysis row per exercise.
 
@@ -99,6 +103,17 @@ The app maps each exercise to weighted target muscles. For example:
 - Stationary bike: cardio, quads, glutes, calves, hamstrings
 
 The dashboard uses this to estimate target sets per muscle over the last 14 days and suggest what looks most due.
+
+## Sports Mapping
+
+The sports form is designed for pickleball and football. Instead of load and estimated 1RM, it records duration, intensity, heart rate, calories, session quality, energy, mood, body parts that felt worked, soreness, score/result, and notes.
+
+Default body-part mappings:
+
+- Pickleball: calves, quads, glutes, hamstrings, shoulders, forearms, core, cardio
+- Football: calves, quads, hamstrings, glutes, hip flexors, core, cardio
+
+These mappings live in `training_app/config.py` under `SPORTS_BODY_PART_TARGETS`.
 
 ## Overall Dashboard
 
