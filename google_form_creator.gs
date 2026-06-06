@@ -4,6 +4,9 @@ function createTrainingLabForm() {
   const exercises = [
     'Push / Bench press',
     'Push / Incline bench press',
+    'Push / Incline dumbbell press',
+    'Push / Flat dumbbell press',
+    'Push / Pectoral fly',
     'Push / Seated shoulder press',
     'Push / Seated lateral raise machine',
     'Push / Single-arm shoulder raise',
@@ -14,6 +17,7 @@ function createTrainingLabForm() {
     'Pull / Incline T-bar row',
     'Pull / Pull-up',
     'Pull / Rear delt machine',
+    'Pull / Reverse pec deck',
     'Pull / Barbell bicep curl',
     'Pull / Dumbbell bicep curl',
     'Pull / Hammer curl',

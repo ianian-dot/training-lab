@@ -9,10 +9,14 @@ WORKOUTS_PATH = DATA_DIR / "workouts.csv"
 LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
 DEFAULT_GOOGLE_SHEET_URL = os.environ.get("TRAINING_LAB_GOOGLE_SHEET_URL", "")
-BARBELL_WEIGHT_KG = 20.0
-BARBELL_PER_SIDE_EXERCISES = {
-    "Bench press",
-    "Incline bench press",
+
+# Extra base load added when a machine/barbell lift is logged as "per side".
+# Edit this one mapping when a machine's starting sled/bar weight is different.
+PER_SIDE_BASE_LOAD_KG = {
+    "Bench press": 20.0,
+    "Incline bench press": 20.0,
+    "Leg press": 47.0,
+    "Leg press calf raise": 47.0,
 }
 
 EXERCISES = {
@@ -31,6 +35,10 @@ EXERCISES = {
     "Rear delt machine": "Shoulders",
     "Leg extension": "Legs",
     "Incline bench press": "Chest",
+    "Incline dumbbell press": "Chest",
+    "Flat dumbbell press": "Chest",
+    "Pectoral fly": "Chest",
+    "Reverse pec deck": "Shoulders",
     "Incline T-bar row": "Back",
     "Leg press": "Legs",
     "Leg press calf raise": "Legs",
@@ -42,6 +50,9 @@ EXERCISE_CATEGORIES = {
     "Push": [
         "Bench press",
         "Incline bench press",
+        "Incline dumbbell press",
+        "Flat dumbbell press",
+        "Pectoral fly",
         "Seated shoulder press",
         "Seated lateral raise machine",
         "Single-arm shoulder raise",
@@ -54,6 +65,7 @@ EXERCISE_CATEGORIES = {
         "Incline T-bar row",
         "Pull-up",
         "Rear delt machine",
+        "Reverse pec deck",
         "Barbell bicep curl",
         "Dumbbell bicep curl",
         "Hammer curl",
@@ -92,6 +104,22 @@ MUSCLE_TARGETS = {
         "Chest": 0.65,
         "Front delts": 0.55,
         "Triceps": 0.4,
+    },
+    "incline dumbbell press": {
+        "Upper chest": 1.0,
+        "Chest": 0.7,
+        "Front delts": 0.45,
+        "Triceps": 0.35,
+    },
+    "flat dumbbell press": {
+        "Chest": 1.0,
+        "Front delts": 0.35,
+        "Triceps": 0.35,
+    },
+    "pectoral fly": {
+        "Chest": 1.0,
+        "Upper chest": 0.25,
+        "Front delts": 0.15,
     },
     "seated lateral raise machine": {
         "Side delts": 1.0,
@@ -149,6 +177,11 @@ MUSCLE_TARGETS = {
         "Rear delts": 1.0,
         "Upper back": 0.35,
         "Traps": 0.25,
+    },
+    "reverse pec deck": {
+        "Rear delts": 1.0,
+        "Upper back": 0.35,
+        "Traps": 0.2,
     },
     "leg extension": {
         "Quads": 1.0,

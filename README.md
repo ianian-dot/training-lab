@@ -25,6 +25,10 @@ python3 -m streamlit run app.py
 - Rear delt machine
 - Leg extension
 - Incline bench press
+- Incline dumbbell press
+- Flat dumbbell press
+- Pectoral fly
+- Reverse pec deck
 - Incline T-bar row
 - Leg press
 - Leg press calf raise
@@ -75,6 +79,9 @@ The app maps each exercise to weighted target muscles. For example:
 
 - Bench press: chest, front delts, triceps
 - Incline bench press: upper chest, chest, front delts, triceps
+- Incline dumbbell press: upper chest, chest, front delts, triceps
+- Flat dumbbell press: chest, front delts, triceps
+- Pectoral fly: chest, upper chest, front delts
 - Lat pulldown and pull-up: lats, upper back, biceps
 - Seated row: upper back, lats, rear delts, biceps
 - Lateral raises: side delts
@@ -83,6 +90,7 @@ The app maps each exercise to weighted target muscles. For example:
 - Hammer curls: brachialis, biceps, forearms
 - Tricep pulldown and overhead tricep extension: triceps
 - Rear delt machine: rear delts, upper back, traps
+- Reverse pec deck: rear delts, upper back, traps
 - Leg extension: quads
 - Leg press: quads, glutes, hamstrings, calves
 - Leg press calf raise: calves
@@ -107,6 +115,8 @@ The Dashboard tab includes higher-level training consistency metrics:
 - Monday-to-Sunday training calendar
 - weekly gym session bar chart
 - estimated gym cost per session using your monthly fee
+- gym efficiency metrics such as volume per minute and sets per minute
+- month-over-month comparisons for sessions, volume, sets, and average efficiency
 
 ## Recovery Trends
 
@@ -126,9 +136,18 @@ These charts are exploratory rather than causal. They help generate questions li
 
 - `total`: load is the entered weight
 - `per hand`: load is entered weight x 2
-- `per side` for bench press and incline bench press: load is 20kg barbell + entered weight x 2
-- `per side` for machines such as leg press: load is entered weight x 2
+- `per side`: if the exercise has a configured base load, load is base load + entered weight x 2
+- `per side`: if no base load is configured, load is entered weight x 2
 - `bodyweight`: load is the entered weight, usually 0 unless you choose to track added weight
+
+Configured `per side` base loads live in `training_app/config.py` under `PER_SIDE_BASE_LOAD_KG`. Current defaults:
+
+- Bench press: 20kg bar
+- Incline bench press: 20kg bar
+- Leg press: 47kg sled
+- Leg press calf raise: 47kg sled
+
+This is deliberately easy to change if your gym machine uses a different starting weight.
 
 ## Code Structure
 

@@ -55,13 +55,16 @@ The dashboard maps the Google Form column names into its internal workout schema
 
 The new form's exercise dropdown is grouped with labels like `Push / Bench press` and `Pull / Lat pulldown` so it is easier to scan on a phone. The app strips the group prefix and stores the clean exercise name.
 
-For bench press and incline bench press, selecting `per side` means the dashboard calculates load as `20kg bar + 2 x entered side weight`. For machine or dumbbell-style entries, `per side` or `per hand` is treated as `2 x entered weight`.
+For exercises with a configured base load, selecting `per side` means the dashboard calculates load as `base load + 2 x entered side weight`. Current defaults are configured in `training_app/config.py` under `PER_SIDE_BASE_LOAD_KG`: bench press and incline bench press use a 20kg bar, while leg press and leg press calf raise use a 47kg sled. For exercises without a configured base load, `per side` or `per hand` is treated as `2 x entered weight`.
 
 If you submit `Later update only` with no exercises, the app creates a zero-set `Session update` row. This lets you add body weight, protein, calories, heart rate, or notes later without disrupting the workout logging flow.
 
 Older entries that used `Other exercise` are detected by keyword. For example:
 
 - `inclined bench` -> `Incline bench press`
+- `inclined dumbbell press` -> `Incline dumbbell press`
+- `pectoral fly` or `pectorial fly` -> `Pectoral fly`
+- `reverse pec deck` or `rear delt fly` -> `Reverse pec deck`
 - `hammer curl` -> `Hammer curl`
 - `leg press calves` -> `Leg press calf raise`
 - `stationary bike` -> `Stationary bike`

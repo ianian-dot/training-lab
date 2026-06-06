@@ -12,10 +12,13 @@ from .analytics import (
     calendar_matrix,
     cost_summary,
     current_month_summary,
+    daily_efficiency,
     daily_recovery_performance,
+    exercise_progress_summary,
     format_current_target,
     format_set_target,
     latest_body_metrics,
+    monthly_training_summary,
     protein_performance_summary,
     rest_day_summary,
     session_days,
@@ -29,6 +32,7 @@ from .config import (
     MUSCLE_GROUPS,
     MUSCLE_SECTIONS,
     MUSCLE_TARGETS,
+    PER_SIDE_BASE_LOAD_KG,
     WORKOUTS_PATH,
 )
 from .data import append_workout, canonical_label
@@ -302,6 +306,29 @@ def render_progress(df: pd.DataFrame) -> None:
         return
 
     df = df.dropna(subset=["date"]).sort_values("date")
+    snapshot = exercise_progress_summary(df)
+    if not snapshot.empty:
+        st.markdown("**All exercise snapshot**")
+        display = snapshot.copy()
+        display["Last done"] = display["Last done"].dt.strftime("%Y-%m-%d")
+        st.dataframe(
+            display.round(
+                {
+                    "Latest load": 1,
+                    "Previous load": 1,
+                    "Load change": 1,
+                    "Best load": 1,
+                    "Latest est. 1RM": 1,
+                    "Best est. 1RM": 1,
+                    "Latest volume": 0,
+                }
+            ),
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.caption("Load change compares the latest logged row for that exercise with the previous logged row.")
+
+    st.divider()
     exercise_options = sorted(df["exercise"].dropna().unique())
     selected = st.selectbox("Exercise", exercise_options, key="progress_exercise")
     metric_label = st.segmented_control(
@@ -465,6 +492,72 @@ def render_dashboard(df: pd.DataFrame) -> None:
     detail_cols[1].metric("Est. total gym cost", f"${cost['total_cost']:.0f}")
     longest_rest = rest["longest_rest_days"]
     detail_cols[2].metric("Longest rest", "-" if longest_rest is None else f"{longest_rest} days")
+
+    st.markdown("**Efficiency**")
+    efficiency = daily_efficiency(df)
+    latest_efficiency = efficiency.dropna(subset=["duration_min"]).iloc[-1] if not efficiency.empty else None
+    efficiency_cols = st.columns(4)
+    if latest_efficiency is None:
+        efficiency_cols[0].metric("Latest volume / min", "-")
+        efficiency_cols[1].metric("Latest sets / min", "-")
+        efficiency_cols[2].metric("Latest exercises / hour", "-")
+        efficiency_cols[3].metric("Tracked duration", "-")
+    else:
+        efficiency_cols[0].metric("Latest volume / min", f"{latest_efficiency['volume_per_min']:.1f} kg")
+        efficiency_cols[1].metric("Latest sets / min", f"{latest_efficiency['sets_per_min']:.2f}")
+        efficiency_cols[2].metric("Latest exercises / hour", f"{latest_efficiency['exercises_per_hour']:.1f}")
+        efficiency_cols[3].metric("Tracked duration", f"{latest_efficiency['duration_min']:.0f} min")
+
+    if not efficiency.empty and not efficiency[["volume_per_min", "sets_per_min"]].dropna(how="all").empty:
+        st.line_chart(
+            efficiency[["day", "volume_per_min", "sets_per_min"]],
+            x="day",
+            y=["volume_per_min", "sets_per_min"],
+            use_container_width=True,
+        )
+        st.caption("Efficiency depends heavily on logging duration consistently. It is most useful within similar session types.")
+
+    monthly = monthly_training_summary(df)
+    if not monthly.empty:
+        st.markdown("**Month over month**")
+        latest_month = monthly.iloc[-1]
+        previous_month = monthly.iloc[-2] if len(monthly) > 1 else None
+        month_cols = st.columns(4)
+        session_delta = None if previous_month is None else int(latest_month["sessions"] - previous_month["sessions"])
+        volume_delta = None if previous_month is None else latest_month["total_volume_kg"] - previous_month["total_volume_kg"]
+        sets_delta = None if previous_month is None else latest_month["total_sets"] - previous_month["total_sets"]
+        efficiency_delta = (
+            None
+            if previous_month is None
+            else latest_month.get("avg_volume_per_min", 0) - previous_month.get("avg_volume_per_min", 0)
+        )
+        month_cols[0].metric("Sessions", int(latest_month["sessions"]), session_delta)
+        month_cols[1].metric("Volume", f"{latest_month['total_volume_kg']:,.0f} kg", None if volume_delta is None else f"{volume_delta:,.0f}")
+        month_cols[2].metric("Sets", f"{latest_month['total_sets']:.0f}", None if sets_delta is None else f"{sets_delta:.0f}")
+        avg_eff = latest_month.get("avg_volume_per_min")
+        month_cols[3].metric(
+            "Avg volume / min",
+            "-" if pd.isna(avg_eff) else f"{avg_eff:.1f} kg",
+            None if efficiency_delta is None or pd.isna(efficiency_delta) else f"{efficiency_delta:.1f}",
+        )
+
+        monthly_table = monthly.copy()
+        monthly_table["month"] = monthly_table["month"].dt.strftime("%Y-%m")
+        st.dataframe(
+            monthly_table[
+                [
+                    "month",
+                    "sessions",
+                    "total_sets",
+                    "total_volume_kg",
+                    "avg_duration_min",
+                    "avg_volume_per_min",
+                    "avg_session_quality",
+                ]
+            ].round(1),
+            hide_index=True,
+            use_container_width=True,
+        )
 
     trend_col, calendar_col = st.columns([1, 1.2])
     with trend_col:
@@ -710,6 +803,23 @@ def render_mappings() -> None:
         )
 
     st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    st.markdown("**Per-side base load assumptions**")
+    if PER_SIDE_BASE_LOAD_KG:
+        assumptions = pd.DataFrame(
+            [
+                {
+                    "Exercise": exercise,
+                    "Base load added when weight basis is per side": f"{base_load:g} kg",
+                    "Formula": f"{base_load:g} + entered weight x 2",
+                }
+                for exercise, base_load in sorted(PER_SIDE_BASE_LOAD_KG.items())
+            ]
+        )
+        st.dataframe(assumptions, hide_index=True, use_container_width=True)
+        st.caption("Configure these defaults in training_app/config.py under PER_SIDE_BASE_LOAD_KG.")
+    else:
+        st.info("No per-side base load assumptions are configured.")
 
     st.markdown("**Raw mapping weights**")
     raw_rows = []

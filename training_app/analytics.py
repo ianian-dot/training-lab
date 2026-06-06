@@ -182,6 +182,103 @@ def protein_performance_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
+def daily_efficiency(df: pd.DataFrame) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date"]).copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    workouts["day"] = pd.to_datetime(workouts["date"]).dt.normalize()
+    daily = (
+        workouts.groupby("day", as_index=False)
+        .agg(
+            duration_min=("duration_min", "max"),
+            total_sets=("sets", "sum"),
+            total_reps=("reps", "sum"),
+            volume_kg=("volume_kg", "sum"),
+            exercise_count=("exercise", "nunique"),
+            avg_rpe=("rpe", "mean"),
+            session_quality=("session_quality", "max"),
+        )
+        .sort_values("day")
+    )
+
+    usable_duration = daily["duration_min"].where(daily["duration_min"] > 0)
+    daily["volume_per_min"] = daily["volume_kg"] / usable_duration
+    daily["sets_per_min"] = daily["total_sets"] / usable_duration
+    daily["exercises_per_hour"] = daily["exercise_count"] / usable_duration * 60
+    return daily
+
+
+def monthly_training_summary(df: pd.DataFrame) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date"]).copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    workouts["month"] = pd.to_datetime(workouts["date"]).dt.to_period("M").dt.to_timestamp()
+    sessions = (
+        workouts[["month", "date"]]
+        .drop_duplicates()
+        .groupby("month", as_index=False)
+        .agg(sessions=("date", "count"))
+    )
+    monthly = (
+        workouts.groupby("month", as_index=False)
+        .agg(
+            total_sets=("sets", "sum"),
+            total_volume_kg=("volume_kg", "sum"),
+            avg_rpe=("rpe", "mean"),
+            avg_session_quality=("session_quality", "mean"),
+            avg_duration_min=("duration_min", "mean"),
+        )
+        .merge(sessions, on="month", how="left")
+        .sort_values("month")
+    )
+
+    efficiency = daily_efficiency(df)
+    if not efficiency.empty:
+        efficiency["month"] = efficiency["day"].dt.to_period("M").dt.to_timestamp()
+        monthly_efficiency = (
+            efficiency.groupby("month", as_index=False)
+            .agg(avg_volume_per_min=("volume_per_min", "mean"), avg_sets_per_min=("sets_per_min", "mean"))
+        )
+        monthly = monthly.merge(monthly_efficiency, on="month", how="left")
+
+    for column in ["sessions", "total_sets", "total_volume_kg", "avg_volume_per_min"]:
+        monthly[f"{column}_change"] = monthly[column].diff()
+    return monthly
+
+
+def exercise_progress_summary(df: pd.DataFrame) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date"]).sort_values("date").copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    rows = []
+    for exercise, exercise_df in workouts.groupby("exercise"):
+        exercise_df = exercise_df.sort_values("date")
+        latest = exercise_df.iloc[-1]
+        previous = exercise_df.iloc[-2] if len(exercise_df) > 1 else None
+        best_load = exercise_df["load_kg"].max()
+        best_1rm = exercise_df["estimated_1rm_kg"].max()
+
+        rows.append(
+            {
+                "Exercise": exercise,
+                "Entries": len(exercise_df),
+                "Last done": latest["date"],
+                "Latest load": latest["load_kg"],
+                "Previous load": None if previous is None else previous["load_kg"],
+                "Load change": None if previous is None else latest["load_kg"] - previous["load_kg"],
+                "Best load": best_load,
+                "Latest est. 1RM": latest["estimated_1rm_kg"],
+                "Best est. 1RM": best_1rm,
+                "Latest volume": latest["volume_kg"],
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values(["Last done", "Exercise"], ascending=[False, True])
+
+
 def calendar_matrix(df: pd.DataFrame) -> pd.DataFrame:
     days = session_days(df)
     if days.empty:

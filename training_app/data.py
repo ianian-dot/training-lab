@@ -8,13 +8,12 @@ from pandas.errors import EmptyDataError
 import streamlit as st
 
 from .config import (
-    BARBELL_PER_SIDE_EXERCISES,
-    BARBELL_WEIGHT_KG,
     COLUMNS,
     COLUMN_ALIASES,
     DATA_DIR,
     EXERCISES,
     LEGACY_FORM_PATH,
+    PER_SIDE_BASE_LOAD_KG,
     WORKOUTS_PATH,
 )
 
@@ -56,6 +55,29 @@ def detect_exercise_name(value: object) -> str:
     normalized = canonical_label(raw).replace("-", " ")
     compact = " ".join(normalized.split())
 
+    for exercise in EXERCISES:
+        if canonical_label(exercise).replace("-", " ") == compact:
+            return exercise
+
+    if (
+        ("incline" in compact or "inclined" in compact)
+        and ("dumbbell" in compact or "db" in compact)
+        and "press" in compact
+    ):
+        return "Incline dumbbell press"
+    if (
+        ("flat" in compact and ("dumbbell" in compact or "db" in compact) and "press" in compact)
+        or "dumbbell bench press" in compact
+    ):
+        return "Flat dumbbell press"
+    if ("pec" in compact or "pectoral" in compact or "pectorial" in compact) and (
+        "fly" in compact or "deck" in compact
+    ):
+        return "Pectoral fly"
+    if "reverse pec" in compact or "rear delt fly" in compact:
+        return "Reverse pec deck"
+    if "bicep hammer curl" in compact:
+        return "Hammer curl"
     if ("calf" in compact or "calves" in compact) and "leg press" in compact:
         return "Leg press calf raise"
     if ("calf" in compact or "calves" in compact) and "press" in compact:
@@ -74,10 +96,6 @@ def detect_exercise_name(value: object) -> str:
         return "Stationary bike"
     if "cycling" in compact:
         return "Cycling"
-
-    for exercise in EXERCISES:
-        if canonical_label(exercise) == compact:
-            return exercise
 
     return raw
 
@@ -121,6 +139,12 @@ def normalize_start_time(value: object) -> object:
         hour += 12
 
     return f"{hour:02d}:{minute:02d}"
+
+
+def normalize_date(value: object) -> object:
+    if not is_filled(value):
+        return pd.NaT
+    return pd.to_datetime(value, errors="coerce")
 
 
 def expand_multi_exercise_form(df: pd.DataFrame) -> pd.DataFrame:
@@ -304,8 +328,8 @@ def calculate_load_kg(row: pd.Series) -> float:
     basis = str(row.get("weight_basis", "")).strip().lower()
     exercise = str(row.get("exercise", "")).strip()
 
-    if basis == "per side" and exercise in BARBELL_PER_SIDE_EXERCISES:
-        return BARBELL_WEIGHT_KG + weight * 2
+    if basis == "per side" and exercise in PER_SIDE_BASE_LOAD_KG:
+        return PER_SIDE_BASE_LOAD_KG[exercise] + weight * 2
     if basis in {"per hand", "per side", "each arm"}:
         return weight * 2
     return weight
@@ -329,7 +353,7 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
     df["start_time"] = df["start_time"].apply(normalize_start_time)
     missing_group = df["muscle_group"].isna() | (df["muscle_group"].fillna("").astype(str).str.strip() == "")
     df.loc[missing_group, "muscle_group"] = df.loc[missing_group, "exercise"].map(EXERCISES).fillna("Full body")
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["date"] = df["date"].apply(normalize_date)
     for column in [
         "sets",
         "reps",
