@@ -57,7 +57,7 @@ The app keeps a `time_validation` note when it changes or flags a start time. Fo
 
 To create the form, use `google_form_creator.gs` in Google Apps Script. Detailed steps are in `docs/google_form_setup.md`.
 
-For pickleball and football, use `sports_form_creator.gs` to create a separate sports form. Sports sessions are tracked separately because they are session-based activities rather than strength rows with sets, reps, and load.
+For pickleball and football, use `sports_form_creator.gs` to create a separate sports form. Sports sessions are tracked separately because they are session-based activities rather than strength rows with sets, reps, and load. The local starter file is `data/sports.csv`.
 
 The Google Sheet stores each session as one wide row, with columns like `Exercise 1`, `Sets 1`, `Exercise 2`, `Sets 2`, and so on. The dashboard converts those exercise blocks into one long-format analysis row per exercise.
 
@@ -106,7 +106,9 @@ The dashboard uses this to estimate target sets per muscle over the last 14 days
 
 ## Sports Mapping
 
-The sports form is designed for pickleball and football. Instead of load and estimated 1RM, it records duration, intensity, heart rate, calories, session quality, energy, mood, body parts that felt worked, soreness, score/result, and notes.
+The sports form is designed for pickleball and football. Instead of load and estimated 1RM, it records only the practical basics: duration, active calories, intensity, average/max heart rate, and notes.
+
+The Sports tab currently reads `data/sports.csv`. Backfilled entries can use estimated calories; for example, unknown pickleball sessions are currently set to 450 kcal as a midpoint of the 400-500 kcal active range.
 
 Default body-part mappings:
 

@@ -3,7 +3,7 @@ function createTrainingLabSportsForm() {
   const startMinutes = ['00', '15', '30', '45'];
 
   const form = FormApp.create('Training Lab Sports Log');
-  form.setDescription('Submit one response whenever you play pickleball or football. This is separate from gym lifting because the metrics are session-based rather than sets/reps/load.');
+  form.setDescription('Submit one quick response whenever you play pickleball or football.');
   form.setCollectEmail(false);
 
   form.addDateItem()
@@ -33,38 +33,13 @@ function createTrainingLabSportsForm() {
     .setBounds(1, 10)
     .setHelpText('1 = easy, 10 = extremely hard.');
 
-  form.addScaleItem()
-    .setTitle('Session quality')
-    .setBounds(1, 10);
-
-  form.addScaleItem()
-    .setTitle('Energy')
-    .setBounds(1, 10);
-
-  form.addScaleItem()
-    .setTitle('Mood after')
-    .setBounds(1, 10);
-
   form.addTextItem().setTitle('Calories');
   form.addTextItem().setTitle('Avg heart rate');
   form.addTextItem().setTitle('Max heart rate');
-  form.addTextItem().setTitle('Body weight kg');
-
-  form.addCheckboxItem()
-    .setTitle('Body parts that felt worked')
-    .setChoiceValues(['Calves', 'Quads', 'Hamstrings', 'Glutes', 'Hip flexors', 'Core', 'Shoulders', 'Forearms', 'Cardio']);
-
-  form.addCheckboxItem()
-    .setTitle('Soreness or niggles')
-    .setChoiceValues(['None', 'Ankle', 'Knee', 'Hip', 'Hamstring', 'Calf', 'Lower back', 'Shoulder', 'Elbow/wrist']);
-
-  form.addTextItem()
-    .setTitle('Score or result')
-    .setHelpText('Optional. Example: won 11-8, casual rally, 5-a-side draw.');
 
   form.addParagraphTextItem()
     .setTitle('Notes')
-    .setHelpText('Anything useful: court/field, partners, movement felt sharp/sluggish, injuries, weather.');
+    .setHelpText('Optional: score/result, soreness, who you played with, or anything useful.');
 
   const sheet = SpreadsheetApp.create('Training Lab Sports Responses');
   form.setDestination(FormApp.DestinationType.SPREADSHEET, sheet.getId());

@@ -127,6 +127,76 @@ def render_recovery_trends(df: pd.DataFrame) -> None:
         st.dataframe(summary.round(1), hide_index=True, use_container_width=True)
 
 
+def render_sports(sports: pd.DataFrame) -> None:
+    st.subheader("Sports")
+
+    if sports.empty:
+        st.info("Log pickleball or football sessions to unlock sports trends.")
+        return
+
+    sports = sports.dropna(subset=["date"]).sort_values("date").copy()
+    st.caption("Backfilled entries can use estimated calories until Apple Watch or manual details are available.")
+
+    cols = st.columns(4)
+    cols[0].metric("Sport sessions", len(sports))
+    cols[1].metric("Active calories", f"{sports['calories'].fillna(0).sum():,.0f} kcal")
+    avg_intensity = sports["intensity"].mean()
+    cols[2].metric("Avg intensity", "-" if pd.isna(avg_intensity) else f"{avg_intensity:.1f}/10")
+    latest = sports["date"].max()
+    cols[3].metric("Latest sport", latest.strftime("%b %d"))
+
+    daily = (
+        sports.groupby(["date", "sport"], as_index=False)
+        .agg(
+            sessions=("sport", "count"),
+            calories=("calories", "sum"),
+            duration_min=("duration_min", "sum"),
+            intensity=("intensity", "mean"),
+            avg_heart_rate=("avg_heart_rate", "mean"),
+        )
+        .sort_values("date")
+    )
+
+    chart_cols = st.columns(2)
+    with chart_cols[0]:
+        st.markdown("**Sports sessions over time**")
+        st.bar_chart(daily, x="date", y="sessions", color="sport", use_container_width=True)
+
+    with chart_cols[1]:
+        st.markdown("**Active calories over time**")
+        st.bar_chart(daily, x="date", y="calories", color="sport", use_container_width=True)
+
+    st.markdown("**Estimated body-part load**")
+    target_rows = []
+    for _, row in sports.iterrows():
+        targets = SPORTS_BODY_PART_TARGETS.get(str(row["sport"]), {})
+        calories = 0 if pd.isna(row["calories"]) else float(row["calories"])
+        duration = 0 if pd.isna(row["duration_min"]) else float(row["duration_min"])
+        for body_part, emphasis in targets.items():
+            target_rows.append(
+                {
+                    "Body part": body_part,
+                    "Estimated calorie load": calories * emphasis,
+                    "Estimated duration load": duration * emphasis,
+                }
+            )
+
+    if target_rows:
+        body_load = (
+            pd.DataFrame(target_rows)
+            .groupby("Body part", as_index=False)
+            .sum()
+            .sort_values("Estimated calorie load", ascending=False)
+        )
+        st.bar_chart(body_load, x="Body part", y="Estimated calorie load", use_container_width=True)
+        st.dataframe(body_load.round(1), hide_index=True, use_container_width=True)
+
+    st.markdown("**Sports log**")
+    display = sports.copy()
+    display["date"] = display["date"].dt.strftime("%Y-%m-%d")
+    st.dataframe(display, hide_index=True, use_container_width=True)
+
+
 def render_muscle_trends(df: pd.DataFrame) -> None:
     st.subheader("Muscle trends")
 

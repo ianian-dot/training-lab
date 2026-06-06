@@ -6,6 +6,7 @@ from pathlib import Path
 APP_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = APP_DIR / "data"
 WORKOUTS_PATH = DATA_DIR / "workouts.csv"
+SPORTS_PATH = DATA_DIR / "sports.csv"
 LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
 SPORTS_FORM_SCRIPT_PATH = APP_DIR / "sports_form_creator.gs"

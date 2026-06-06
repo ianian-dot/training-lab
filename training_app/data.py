@@ -15,8 +15,21 @@ from .config import (
     EXERCISES,
     LEGACY_FORM_PATH,
     PER_SIDE_BASE_LOAD_KG,
+    SPORTS_PATH,
     WORKOUTS_PATH,
 )
+
+SPORTS_COLUMNS = [
+    "date",
+    "sport",
+    "start_time",
+    "duration_min",
+    "calories",
+    "intensity",
+    "avg_heart_rate",
+    "max_heart_rate",
+    "notes",
+]
 
 def canonical_label(value: object) -> str:
     return str(value).strip().lower()
@@ -460,3 +473,95 @@ def append_workout(row: dict) -> None:
     df = df[COLUMNS]
     df = pd.concat([df, pd.DataFrame([row], columns=COLUMNS)], ignore_index=True)
     df.to_csv(WORKOUTS_PATH, index=False)
+
+
+def ensure_sports_file() -> None:
+    DATA_DIR.mkdir(exist_ok=True)
+    if SPORTS_PATH.exists():
+        return
+
+    pd.DataFrame(
+        [
+            {
+                "date": "2026-05-25",
+                "sport": "Pickleball",
+                "start_time": None,
+                "duration_min": None,
+                "calories": 450,
+                "intensity": None,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "notes": "Backfilled from memory. Calories estimated using 400-500 kcal active range.",
+            },
+            {
+                "date": "2026-05-26",
+                "sport": "Pickleball",
+                "start_time": None,
+                "duration_min": None,
+                "calories": 450,
+                "intensity": None,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "notes": "Backfilled from memory. Calories estimated using 400-500 kcal active range.",
+            },
+            {
+                "date": "2026-05-27",
+                "sport": "Pickleball",
+                "start_time": None,
+                "duration_min": None,
+                "calories": 450,
+                "intensity": None,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "notes": "Backfilled from memory. Calories estimated using 400-500 kcal active range.",
+            },
+            {
+                "date": "2026-06-01",
+                "sport": "Pickleball",
+                "start_time": None,
+                "duration_min": None,
+                "calories": 450,
+                "intensity": None,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "notes": "Backfilled from memory. First of two pickleball sessions that day. Calories estimated.",
+            },
+            {
+                "date": "2026-06-01",
+                "sport": "Pickleball",
+                "start_time": None,
+                "duration_min": None,
+                "calories": 450,
+                "intensity": None,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "notes": "Backfilled from memory. Second of two pickleball sessions that day. Calories estimated.",
+            },
+            {
+                "date": "2026-06-02",
+                "sport": "Pickleball",
+                "start_time": None,
+                "duration_min": None,
+                "calories": 450,
+                "intensity": None,
+                "avg_heart_rate": None,
+                "max_heart_rate": None,
+                "notes": "Backfilled from memory. Calories estimated using 400-500 kcal active range.",
+            },
+        ],
+        columns=SPORTS_COLUMNS,
+    ).to_csv(SPORTS_PATH, index=False)
+
+
+def load_sports() -> pd.DataFrame:
+    ensure_sports_file()
+    sports = pd.read_csv(SPORTS_PATH)
+    for column in SPORTS_COLUMNS:
+        if column not in sports.columns:
+            sports[column] = None
+    sports = sports[SPORTS_COLUMNS]
+    sports["date"] = sports["date"].apply(normalize_date)
+    sports["start_time"] = sports["start_time"].apply(lambda value: normalize_start_time_with_validation(value)[0])
+    for column in ["duration_min", "calories", "intensity", "avg_heart_rate", "max_heart_rate"]:
+        sports[column] = pd.to_numeric(sports[column], errors="coerce")
+    return sports.sort_values("date").reset_index(drop=True)
