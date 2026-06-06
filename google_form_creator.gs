@@ -127,6 +127,47 @@ function createTrainingLabForm() {
   Logger.log('Response sheet URL: ' + sheet.getUrl());
 }
 
+function updateExistingTrainingLabExerciseDropdowns() {
+  const form = FormApp.openById('1ijRaekaR0-3D6FAvIIsMOTJJrDt3JH2wa-M6DOHHQ_M');
+  const exercises = [
+    'Push / Bench press',
+    'Push / Incline bench press',
+    'Push / Incline dumbbell press',
+    'Push / Flat dumbbell press',
+    'Push / Pectoral fly',
+    'Push / Seated shoulder press',
+    'Push / Seated lateral raise machine',
+    'Push / Single-arm shoulder raise',
+    'Push / Tricep pulldown',
+    'Push / Overhead dumbbell tricep extension',
+    'Pull / Lat pulldown',
+    'Pull / Seated row',
+    'Pull / Incline T-bar row',
+    'Pull / Pull-up',
+    'Pull / Rear delt machine',
+    'Pull / Reverse pec deck',
+    'Pull / Barbell bicep curl',
+    'Pull / Dumbbell bicep curl',
+    'Pull / Hammer curl',
+    'Legs / Leg extension',
+    'Legs / Leg press',
+    'Legs / Leg press calf raise',
+    'Cardio / Cycling',
+    'Cardio / Stationary bike',
+    'Other'
+  ];
+
+  for (let index = 1; index <= 6; index++) {
+    const item = form.getItems(FormApp.ItemType.LIST)
+      .find(candidate => candidate.getTitle() === 'Exercise ' + index);
+    if (item) {
+      item.asListItem().setChoiceValues(exercises);
+    }
+  }
+
+  Logger.log('Updated exercise dropdowns: ' + form.getEditUrl());
+}
+
 function addTimeDropdownsToExistingTrainingLabForm() {
   const form = FormApp.openById('1ijRaekaR0-3D6FAvIIsMOTJJrDt3JH2wa-M6DOHHQ_M');
   const existingTitles = form.getItems().map(item => item.getTitle());
