@@ -3,11 +3,12 @@ from __future__ import annotations
 import streamlit as st
 
 from training_app.config import DEFAULT_GOOGLE_SHEET_URL
-from training_app.data import load_sports, load_workouts, to_google_sheet_csv_url
+from training_app.data import load_health_daily, load_sports, load_workouts, to_google_sheet_csv_url
 from training_app.views import (
     render_dashboard,
     render_data,
     render_gym_view,
+    render_health,
     render_log_form,
     render_mappings,
     render_muscle_trends,
@@ -41,6 +42,7 @@ def main() -> None:
 
     df = load_workouts(csv_url)
     sports = load_sports()
+    health = load_health_daily()
     (
         gym_tab,
         log_tab,
@@ -48,6 +50,7 @@ def main() -> None:
         muscle_trends_tab,
         recovery_trends_tab,
         sports_tab,
+        health_tab,
         dashboard_tab,
         setup_tab,
         data_tab,
@@ -60,6 +63,7 @@ def main() -> None:
             "Muscle trends",
             "Recovery trends",
             "Sports",
+            "Apple Health",
             "Dashboard",
             "Setup",
             "Data",
@@ -79,6 +83,8 @@ def main() -> None:
         render_recovery_trends(df)
     with sports_tab:
         render_sports(sports)
+    with health_tab:
+        render_health(health)
     with dashboard_tab:
         render_dashboard(df)
     with setup_tab:

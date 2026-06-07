@@ -25,6 +25,7 @@ The project solves a real personal workflow: logging workouts quickly during a g
 - It uses domain modelling: exercises are mapped to primary and secondary muscle targets with weighted set counts.
 - It is phone-aware: Google Forms handles fast gym-floor logging, while Streamlit provides the dashboard.
 - It has a clear growth path into broader health analytics, including pickleball, football, sleep, mood, and recovery.
+- It includes an optional iPhone Shortcuts ingestion path for Apple Health summaries through a small FastAPI receiver.
 
 ## Interview Talking Points
 
@@ -43,6 +44,7 @@ The project solves a real personal workflow: logging workouts quickly during a g
 - `training_app/analytics.py`: volume, estimated 1RM, muscle target sets, recency, and next-target calculations.
 - `training_app/visualizations.py`: muscle coverage tile rendering.
 - `training_app/views.py`: Streamlit tabs and user-facing screens.
+- `health_receiver.py`: optional local API that receives Apple Health summaries from iPhone Shortcuts.
 
 ## Pickleball, Football, Sleep, And Mood
 
@@ -55,3 +57,5 @@ The clean long-term design is:
 - `recovery_daily`: sleep duration, deep sleep, sleep quality, morning mood, afternoon mood, stress, energy.
 
 Those tables can later feed one unified dashboard that asks better questions, such as whether poor sleep affects training performance, whether pickleball changes recovery, and which habits correlate with better mood or gym quality.
+
+The first Apple Health sync path is a local FastAPI receiver. It is useful for testing and nightly home sync, but a deployed HTTPS endpoint is needed if the phone should sync when the laptop is not reachable.

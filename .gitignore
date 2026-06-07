@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 .streamlit/secrets.toml
 ~$*
-
+data/apple_health_daily.csv
+data/raw_health_payloads/

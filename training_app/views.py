@@ -197,6 +197,42 @@ def render_sports(sports: pd.DataFrame) -> None:
     st.dataframe(display, hide_index=True, use_container_width=True)
 
 
+def render_health(health: pd.DataFrame) -> None:
+    st.subheader("Apple Health")
+
+    if health.empty:
+        st.info("No Apple Health rows yet. Run `python3 health_receiver.py`, then send a JSON payload from iPhone Shortcuts to `/health-data`.")
+        return
+
+    health = health.dropna(subset=["date"]).sort_values("date").copy()
+    latest = health.iloc[-1]
+    cols = st.columns(5)
+    cols[0].metric("Latest date", latest["date"].strftime("%b %d"))
+    cols[1].metric("Steps", "-" if pd.isna(latest["steps"]) else f"{latest['steps']:,.0f}")
+    cols[2].metric("Active kcal", "-" if pd.isna(latest["active_energy_kcal"]) else f"{latest['active_energy_kcal']:,.0f}")
+    cols[3].metric("Exercise min", "-" if pd.isna(latest["exercise_minutes"]) else f"{latest['exercise_minutes']:.0f}")
+    cols[4].metric("Sleep", "-" if pd.isna(latest["sleep_hours"]) else f"{latest['sleep_hours']:.1f} h")
+
+    st.markdown("**Activity over time**")
+    activity_cols = ["steps", "active_energy_kcal", "exercise_minutes"]
+    if health[activity_cols].dropna(how="all").empty:
+        st.info("Send steps, active calories, or exercise minutes to unlock activity charts.")
+    else:
+        st.line_chart(health[["date", *activity_cols]], x="date", y=activity_cols, use_container_width=True)
+
+    st.markdown("**Sleep and heart rate**")
+    recovery_cols = ["sleep_hours", "deep_sleep_hours", "rem_sleep_hours", "resting_heart_rate", "avg_heart_rate"]
+    if health[recovery_cols].dropna(how="all").empty:
+        st.info("Send sleep or heart-rate data to unlock recovery charts.")
+    else:
+        st.line_chart(health[["date", *recovery_cols]], x="date", y=recovery_cols, use_container_width=True)
+
+    st.markdown("**Health data log**")
+    display = health.copy()
+    display["date"] = display["date"].dt.strftime("%Y-%m-%d")
+    st.dataframe(display, hide_index=True, use_container_width=True)
+
+
 def render_muscle_trends(df: pd.DataFrame) -> None:
     st.subheader("Muscle trends")
 
