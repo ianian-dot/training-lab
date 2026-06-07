@@ -79,17 +79,11 @@ For Streamlit Community Cloud, add the same value as a secret named `google_shee
 
 ## Apple Health Sync
 
-Training Lab includes an optional local FastAPI receiver for iPhone Shortcuts:
+Training Lab includes a Google Apps Script receiver for iPhone Shortcuts. Your iPhone can POST a daily JSON summary to the Apps Script Web App, the script writes a Google Sheet row, and Streamlit reads that sheet in the Apple Health tab.
 
-```bash
-python3 health_receiver.py
-```
+This is the recommended setup because it works even when your laptop is not with you. The older local FastAPI receiver is still included as a learning path, but it only works when your phone can reach your Mac.
 
-Your iPhone can POST a daily JSON summary to `/health-data`, and the receiver writes `data/apple_health_daily.csv`. The Streamlit app reads that file in the Apple Health tab.
-
-This is best for local testing or nightly home sync. If your laptop is not reachable from the gym, the shortcut cannot send data to it until you are back on the same network. For always-available sync, deploy the receiver and use an HTTPS endpoint.
-
-Setup details are in `docs/iphone_health_sync.md`.
+Use `apple_health_receiver.gs` for the Apps Script API. Setup details are in `docs/iphone_health_sync.md`.
 
 ## Muscle target logic
 
@@ -189,6 +183,7 @@ This is deliberately easy to change if your gym machine uses a different startin
 - `training_app/visualizations.py`: muscle coverage visuals
 - `training_app/views.py`: Streamlit screens and tab content
 - `health_receiver.py`: optional FastAPI endpoint for iPhone Shortcuts Apple Health summaries
+- `apple_health_receiver.gs`: Google Apps Script Web App receiver for Apple Health summaries
 
 ## Visualization ideas
 

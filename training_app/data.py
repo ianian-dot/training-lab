@@ -585,11 +585,7 @@ def load_sports() -> pd.DataFrame:
     return sports.sort_values("date").reset_index(drop=True)
 
 
-def load_health_daily() -> pd.DataFrame:
-    if not HEALTH_DAILY_PATH.exists():
-        return pd.DataFrame(columns=HEALTH_DAILY_COLUMNS)
-
-    health = pd.read_csv(HEALTH_DAILY_PATH)
+def normalize_health_daily(health: pd.DataFrame) -> pd.DataFrame:
     for column in HEALTH_DAILY_COLUMNS:
         if column not in health.columns:
             health[column] = None
@@ -609,3 +605,23 @@ def load_health_daily() -> pd.DataFrame:
     ]:
         health[column] = pd.to_numeric(health[column], errors="coerce")
     return health.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
+
+
+def load_health_daily(sheet_url: str | None = None) -> pd.DataFrame:
+    frames = []
+
+    if HEALTH_DAILY_PATH.exists():
+        frames.append(normalize_health_daily(pd.read_csv(HEALTH_DAILY_PATH)))
+
+    if sheet_url:
+        try:
+            frames.append(normalize_health_daily(read_google_sheet_csv(sheet_url)))
+        except Exception as exc:
+            st.sidebar.error(f"Could not load Apple Health Google Sheet: {exc}")
+            st.sidebar.info("Make sure the health sheet is shared as 'Anyone with the link can view' or published to the web.")
+
+    if not frames:
+        return pd.DataFrame(columns=HEALTH_DAILY_COLUMNS)
+
+    combined = pd.concat(frames, ignore_index=True)
+    return combined.drop_duplicates(subset=["date"], keep="last").sort_values("date").reset_index(drop=True)

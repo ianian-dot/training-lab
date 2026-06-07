@@ -2,64 +2,89 @@
 
 This project can receive daily Apple Health summaries from iPhone Shortcuts.
 
-The flow is:
+The recommended cloud flow is:
 
 ```text
 Apple Watch records activity
 -> iPhone Health app stores it
 -> iPhone Shortcut builds a small JSON dictionary
--> POST to Training Lab receiver
--> receiver writes data/apple_health_daily.csv
--> Streamlit Apple Health tab reads the CSV
+-> POST to Google Apps Script Web App
+-> Apps Script writes a Google Sheet row
+-> Streamlit Apple Health tab reads the sheet
 ```
 
-## Important Limitation
+This works when your laptop is not with you because the receiver lives on Google, not on your Mac.
 
-A local server on your Mac only works when your iPhone can reach your Mac.
+## How It Works
 
-That means:
+`apple_health_receiver.gs` is a tiny Google Apps Script API.
 
-- It works well for testing on the same Wi-Fi.
-- It can work as a nightly home sync if your Mac is awake and your iPhone is on the same Wi-Fi.
-- It will not receive data while you are at the gym if your laptop is at home and unreachable.
+It exposes:
 
-For real anywhere sync, deploy the receiver to a small cloud service such as Render, Fly.io, Railway, or a private VPS, then point the Shortcut to that HTTPS URL.
+- `GET /exec`: health check
+- `POST /exec`: accepts JSON from Shortcuts
 
-## Local Test
+Each POST is normalised into the `Health Daily` sheet with these columns:
 
-Install dependencies:
+- `date`
+- `steps`
+- `active_energy_kcal`
+- `exercise_minutes`
+- `stand_hours`
+- `distance_km`
+- `resting_heart_rate`
+- `avg_heart_rate`
+- `sleep_hours`
+- `deep_sleep_hours`
+- `rem_sleep_hours`
+- `source`
+- `received_at`
 
-```bash
-pip install -r requirements.txt
-```
+Rows are upserted by date. If the Shortcut runs twice for the same date, the newest data replaces that date's row.
 
-Start the receiver:
+## Set Up The Google Apps Script API
 
-```bash
-python3 health_receiver.py
-```
+1. Go to https://script.google.com.
+2. Create a new project.
+3. Paste the contents of `apple_health_receiver.gs`.
+4. Save the project as `Training Lab Apple Health Receiver`.
+5. In the left sidebar, open `Project Settings`.
+6. Make sure the script is attached to a spreadsheet, or create a new Google Sheet and use `Extensions > Apps Script` from that sheet.
+7. Click `Deploy > New deployment`.
+8. Select type: `Web app`.
+9. Description: `Training Lab Health Receiver`.
+10. Execute as: `Me`.
+11. Who has access: `Anyone`.
+12. Click `Deploy`.
+13. Authorise the permissions.
+14. Copy the Web App URL. It ends with `/exec`.
 
-Find your Mac's local IP address:
+That `/exec` URL is the endpoint your iPhone Shortcut will POST to.
 
-```bash
-ipconfig getifaddr en0
-```
+## Connect The Sheet To Streamlit
 
-Your iPhone endpoint will look like:
+Open the Google Sheet created/used by the script.
+
+Share it as:
 
 ```text
-http://YOUR_MAC_IP:8000/health-data
+Anyone with the link can view
 ```
 
-Check the server is awake:
+Then in Streamlit:
 
-```text
-http://YOUR_MAC_IP:8000/health
+1. Paste the Sheet URL into the sidebar field `Apple Health Sheet URL`.
+2. Or add it to `.streamlit/secrets.toml`:
+
+```toml
+health_sheet_url = "https://docs.google.com/spreadsheets/d/..."
 ```
+
+For Streamlit Community Cloud, add the same secret named `health_sheet_url`.
 
 ## Shortcut Payload
 
-The receiver expects a simple JSON dictionary. Start with only a few fields:
+Start with only a few fields:
 
 ```json
 {
@@ -90,12 +115,12 @@ Supported fields:
 
 ## Shortcut Setup
 
-In iPhone Shortcuts, create a shortcut like this:
+In iPhone Shortcuts:
 
 1. Add `Current Date`.
 2. Format Date as `yyyy-MM-dd`.
 3. Add `Find Health Samples` for each metric you care about, such as Steps and Active Energy.
-4. Use a statistics action where needed, such as sum for Steps and Active Energy.
+4. Use statistics where needed, such as sum for Steps and Active Energy.
 5. Add `Dictionary`.
 6. Add fields such as:
    - `date`: formatted date
@@ -105,29 +130,51 @@ In iPhone Shortcuts, create a shortcut like this:
    - `avg_heart_rate`: average heart rate
    - `sleep_hours`: sleep duration
 7. Add `Get Contents of URL`.
-8. URL: `http://YOUR_MAC_IP:8000/health-data`
-9. Method: `POST`
-10. Request Body: `JSON`
+8. URL: your Apps Script Web App URL ending in `/exec`.
+9. Method: `POST`.
+10. Request Body: `JSON`.
 11. JSON body: the Dictionary from step 5.
 
-Run it once manually first. If it works, `data/apple_health_daily.csv` will appear locally.
+Run it once manually first. Then check the Google Sheet. If the row appears there, Streamlit can read it.
 
 ## Automation
 
-For a low-friction local setup:
+Once manual testing works:
 
-1. Keep the Mac awake in the evening.
-2. Run `python3 health_receiver.py`.
-3. In Shortcuts Automation, run the health sync shortcut at night, for example 23:30.
-4. Turn off `Ask Before Running`.
+1. In Shortcuts, go to `Automation`.
+2. Create a `Time of Day` automation, for example 23:30.
+3. Add `Run Shortcut`.
+4. Choose the health sync shortcut.
+5. Turn off `Ask Before Running` or choose `Run Immediately`.
 
-If you are away from home at that time, the shortcut may fail. The data is still in Apple Health, so you can run the shortcut manually later when you are home.
+## Optional Token
 
-## Privacy
+`apple_health_receiver.gs` has:
 
-The generated files are ignored by Git:
+```javascript
+const OPTIONAL_TOKEN = '';
+```
 
-- `data/apple_health_daily.csv`
-- `data/raw_health_payloads/`
+If you set this to a secret value, include the same `token` field in your Shortcut dictionary:
 
-Do not commit these files unless you intentionally want personal health data in the repository.
+```json
+{
+  "token": "your-secret",
+  "date": "2026-06-07",
+  "steps": 8500
+}
+```
+
+For a personal low-risk project, leaving this blank is simpler. If you share the Web App URL widely, add a token.
+
+## Local FastAPI Option
+
+`health_receiver.py` is still available as a learning path for real API development.
+
+It works like this:
+
+```text
+iPhone Shortcut -> local Mac FastAPI server -> local CSV -> Streamlit
+```
+
+But it only works when your iPhone can reach your Mac, so it is less practical than Google Apps Script for automatic sync.
