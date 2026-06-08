@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from training_app.config import DEFAULT_GOOGLE_SHEET_URL, DEFAULT_HEALTH_SHEET_URL
+from training_app.config import DEFAULT_GOOGLE_SHEET_URL
 from training_app.data import load_health_daily, load_sports, load_workouts, to_google_sheet_csv_url
 from training_app.views import (
     render_dashboard,
@@ -25,7 +25,6 @@ def main() -> None:
     st.caption("Log the lifts you actually do, then watch consistency, volume, and strength trends.")
 
     default_sheet_url = st.secrets.get("google_sheet_url", DEFAULT_GOOGLE_SHEET_URL)
-    default_health_sheet_url = st.secrets.get("health_sheet_url", DEFAULT_HEALTH_SHEET_URL)
 
     st.sidebar.header("Data source")
     google_sheet_url = st.sidebar.text_input(
@@ -41,18 +40,9 @@ def main() -> None:
     if csv_url:
         st.sidebar.caption(f"CSV export: {to_google_sheet_csv_url(csv_url)}")
 
-    health_sheet_url = st.sidebar.text_input(
-        "Apple Health Sheet URL",
-        value=default_health_sheet_url,
-        placeholder="https://docs.google.com/spreadsheets/d/.../edit?gid=...",
-    ).strip()
-    health_csv_url = health_sheet_url or None
-    if health_csv_url:
-        st.sidebar.caption(f"Health CSV export: {to_google_sheet_csv_url(health_csv_url)}")
-
     df = load_workouts(csv_url)
     sports = load_sports()
-    health = load_health_daily(health_csv_url)
+    health = load_health_daily()
     (
         gym_tab,
         log_tab,

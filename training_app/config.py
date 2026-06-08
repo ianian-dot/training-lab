@@ -12,9 +12,7 @@ HEALTH_RAW_DIR = DATA_DIR / "raw_health_payloads"
 LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
 SPORTS_FORM_SCRIPT_PATH = APP_DIR / "sports_form_creator.gs"
-HEALTH_SCRIPT_PATH = APP_DIR / "apple_health_receiver.gs"
 DEFAULT_GOOGLE_SHEET_URL = os.environ.get("TRAINING_LAB_GOOGLE_SHEET_URL", "")
-DEFAULT_HEALTH_SHEET_URL = os.environ.get("TRAINING_LAB_HEALTH_SHEET_URL", "")
 
 # Extra base load added when a machine/barbell lift is logged as "per side".
 # Edit this one mapping when a machine's starting sled/bar weight is different.

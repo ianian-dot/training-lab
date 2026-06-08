@@ -28,7 +28,6 @@ from .config import (
     EXERCISES,
     EXERCISE_CATEGORIES,
     FORM_SCRIPT_PATH,
-    HEALTH_SCRIPT_PATH,
     LEGACY_FORM_PATH,
     MUSCLE_GROUPS,
     MUSCLE_SECTIONS,
@@ -866,10 +865,6 @@ def render_setup(csv_url: str | None) -> None:
     st.markdown("**Create the sports form**")
     st.write("Use a separate form for pickleball and football so those sessions do not get mixed into lift sets/reps/load.")
     st.code(str(SPORTS_FORM_SCRIPT_PATH), language="text")
-
-    st.markdown("**Create the Apple Health receiver**")
-    st.write("Use this Google Apps Script as a tiny cloud API. Your iPhone Shortcut posts daily Health summaries to it, and the script writes them into a Google Sheet.")
-    st.code(str(HEALTH_SCRIPT_PATH), language="text")
 
     st.markdown("**Connect the sheet**")
     st.write("After responses start coming in, share the new response sheet as viewable by anyone with the link, then paste that new sheet URL into the sidebar.")
