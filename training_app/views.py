@@ -42,6 +42,21 @@ from .data import append_workout, canonical_label
 from .visualizations import format_days_ago, render_muscle_target_visual
 
 
+def normalize_for_comparison(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    normalized = df.copy()
+    for column in columns:
+        values = pd.to_numeric(normalized[column], errors="coerce")
+        minimum = values.min(skipna=True)
+        maximum = values.max(skipna=True)
+        if pd.isna(minimum) or pd.isna(maximum):
+            normalized[column] = pd.NA
+        elif maximum == minimum:
+            normalized[column] = values.where(values.isna(), 50)
+        else:
+            normalized[column] = (values - minimum) / (maximum - minimum) * 100
+    return normalized
+
+
 def render_recovery_trends(df: pd.DataFrame) -> None:
     st.subheader("Recovery trends")
 
@@ -62,14 +77,21 @@ def render_recovery_trends(df: pd.DataFrame) -> None:
             st.line_chart(weight, x="day", y="body_weight_kg", use_container_width=True)
 
     with protein_col:
-        st.markdown("**Protein and workout volume**")
+        st.markdown("**Protein and workout volume index**")
         protein_volume = daily[["day", "protein_grams", "volume_kg"]].copy()
         if protein_volume[["protein_grams", "volume_kg"]].dropna(how="all").empty:
             st.info("No protein or volume entries yet.")
         else:
-            st.line_chart(protein_volume, x="day", y=["protein_grams", "volume_kg"], use_container_width=True)
+            protein_volume = normalize_for_comparison(protein_volume, ["protein_grams", "volume_kg"]).rename(
+                columns={
+                    "protein_grams": "Protein index",
+                    "volume_kg": "Volume index",
+                }
+            )
+            st.line_chart(protein_volume, x="day", y=["Protein index", "Volume index"], use_container_width=True)
+            st.caption("Indexes are normalized 0-100 separately. This compares direction, not grams against kilograms.")
 
-    st.markdown("**Performance and session quality over time**")
+    st.markdown("**Performance and session quality index**")
     trend_options = {
         "Volume": "volume_kg",
         "Best load": "load_kg",
@@ -87,7 +109,13 @@ def render_recovery_trends(df: pd.DataFrame) -> None:
     )
     trend_columns = [trend_options[label] for label in selected]
     if trend_columns:
-        st.line_chart(daily[["day", *trend_columns]], x="day", y=trend_columns, use_container_width=True)
+        trend = daily[["day", *trend_columns]].copy()
+        trend = normalize_for_comparison(trend, trend_columns).rename(
+            columns={column: f"{label} index" for label, column in trend_options.items() if column in trend_columns}
+        )
+        trend_labels = [f"{label} index" for label in selected]
+        st.line_chart(trend, x="day", y=trend_labels, use_container_width=True)
+        st.caption("Each selected metric is normalized 0-100 against its own range before plotting.")
     else:
         st.info("Choose at least one metric.")
 
