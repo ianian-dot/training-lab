@@ -611,13 +611,25 @@ def render_dashboard(df: pd.DataFrame) -> None:
         efficiency_cols[3].metric("Tracked duration", f"{latest_efficiency['duration_min']:.0f} min")
 
     if not efficiency.empty and not efficiency[["volume_per_min", "sets_per_min"]].dropna(how="all").empty:
-        st.line_chart(
+        efficiency_index = normalize_for_comparison(
             efficiency[["day", "volume_per_min", "sets_per_min"]],
+            ["volume_per_min", "sets_per_min"],
+        ).rename(
+            columns={
+                "volume_per_min": "Volume/min index",
+                "sets_per_min": "Sets/min index",
+            }
+        )
+        st.line_chart(
+            efficiency_index,
             x="day",
-            y=["volume_per_min", "sets_per_min"],
+            y=["Volume/min index", "Sets/min index"],
             use_container_width=True,
         )
-        st.caption("Efficiency depends heavily on logging duration consistently. It is most useful within similar session types.")
+        st.caption(
+            "Indexes are normalized 0-100 separately. Use the metric cards for raw kg/min and sets/min; "
+            "use this chart only to compare direction over time."
+        )
 
     monthly = monthly_training_summary(df)
     if not monthly.empty:
