@@ -1,4 +1,2 @@
 pandas
 streamlit
-fastapi
-uvicorn

@@ -13,7 +13,6 @@ from .config import (
     COLUMN_ALIASES,
     DATA_DIR,
     EXERCISES,
-    HEALTH_DAILY_PATH,
     LEGACY_FORM_PATH,
     PER_SIDE_BASE_LOAD_KG,
     SPORTS_PATH,
@@ -30,23 +29,6 @@ SPORTS_COLUMNS = [
     "avg_heart_rate",
     "max_heart_rate",
     "notes",
-]
-
-HEALTH_DAILY_COLUMNS = [
-    "date",
-    "steps",
-    "active_energy_kcal",
-    "exercise_minutes",
-    "stand_hours",
-    "distance_km",
-    "resting_heart_rate",
-    "avg_heart_rate",
-    "sleep_hours",
-    "deep_sleep_hours",
-    "rem_sleep_hours",
-    "source",
-    "received_at",
-    "raw_payload_file",
 ]
 
 def canonical_label(value: object) -> str:
@@ -584,28 +566,3 @@ def load_sports() -> pd.DataFrame:
         sports[column] = pd.to_numeric(sports[column], errors="coerce")
     return sports.sort_values("date").reset_index(drop=True)
 
-
-def load_health_daily() -> pd.DataFrame:
-    if not HEALTH_DAILY_PATH.exists():
-        return pd.DataFrame(columns=HEALTH_DAILY_COLUMNS)
-
-    health = pd.read_csv(HEALTH_DAILY_PATH)
-    for column in HEALTH_DAILY_COLUMNS:
-        if column not in health.columns:
-            health[column] = None
-    health = health[HEALTH_DAILY_COLUMNS]
-    health["date"] = health["date"].apply(normalize_date)
-    for column in [
-        "steps",
-        "active_energy_kcal",
-        "exercise_minutes",
-        "stand_hours",
-        "distance_km",
-        "resting_heart_rate",
-        "avg_heart_rate",
-        "sleep_hours",
-        "deep_sleep_hours",
-        "rem_sleep_hours",
-    ]:
-        health[column] = pd.to_numeric(health[column], errors="coerce")
-    return health.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)

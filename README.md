@@ -77,20 +77,6 @@ google_sheet_url = "https://docs.google.com/spreadsheets/d/..."
 
 For Streamlit Community Cloud, add the same value as a secret named `google_sheet_url`. You can also set an environment variable named `TRAINING_LAB_GOOGLE_SHEET_URL`.
 
-## Apple Health Sync
-
-Training Lab includes an optional local FastAPI receiver for iPhone Shortcuts:
-
-```bash
-python3 health_receiver.py
-```
-
-Your iPhone can POST a daily JSON summary to `/health-data`, and the receiver writes `data/apple_health_daily.csv`. The Streamlit app reads that file in the Apple Health tab.
-
-This is best for local testing or nightly home sync. If your laptop is not reachable from the gym, the shortcut cannot send data to it until you are back on the same network. For always-available sync, deploy the receiver and use an HTTPS endpoint.
-
-Setup details are in `docs/iphone_health_sync.md`.
-
 ## Muscle target logic
 
 The app maps each exercise to weighted target muscles. For example:
@@ -188,7 +174,12 @@ This is deliberately easy to change if your gym machine uses a different startin
 - `training_app/analytics.py`: volume, estimated 1RM, muscle target sets, and next-session scoring
 - `training_app/visualizations.py`: muscle coverage visuals
 - `training_app/views.py`: Streamlit screens and tab content
-- `health_receiver.py`: optional FastAPI endpoint for iPhone Shortcuts Apple Health summaries
+
+## Future Health Data Direction
+
+Apple Health import is not active in the app right now. iPhone Shortcuts is not rich enough for the detail we want, especially deep sleep and clean activity separation between gym, pickleball, and football.
+
+The better future route is likely an export/import workflow or a dedicated health-data app/export that can preserve workout type, sleep stages, heart-rate series, and activity details.
 
 ## Visualization ideas
 
