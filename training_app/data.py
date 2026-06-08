@@ -12,6 +12,7 @@ from .config import (
     COLUMNS,
     COLUMN_ALIASES,
     DATA_DIR,
+    DEFAULT_WEIGHT_BASIS_BY_EXERCISE,
     EXERCISES,
     LEGACY_FORM_PATH,
     PER_SIDE_BASE_LOAD_KG,
@@ -367,6 +368,65 @@ def calculate_load_kg(row: pd.Series) -> float:
     return weight
 
 
+def append_imputation_note(existing: object, note: str) -> str:
+    if is_filled(existing):
+        return f"{str(existing).strip()} | {note}"
+    return note
+
+
+def infer_weight_basis(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    if "imputation_notes" not in df.columns:
+        df["imputation_notes"] = ""
+
+    missing_basis = df["weight_basis"].isna() | (df["weight_basis"].fillna("").astype(str).str.strip() == "")
+    default_basis = df["exercise"].map(DEFAULT_WEIGHT_BASIS_BY_EXERCISE)
+    can_infer = missing_basis & default_basis.notna()
+
+    df.loc[can_infer, "weight_basis"] = default_basis[can_infer]
+    for index in df[can_infer].index:
+        df.at[index, "imputation_notes"] = append_imputation_note(
+            df.at[index, "imputation_notes"],
+            f"Weight basis defaulted to {df.at[index, 'weight_basis']}",
+        )
+
+    return df
+
+
+def impute_sets_reps_from_exercise_mean(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    if "imputation_notes" not in df.columns:
+        df["imputation_notes"] = ""
+
+    ordered = df.sort_values(["date"], kind="stable")
+    for column in ["sets", "reps"]:
+        historical_mean = (
+            ordered.groupby("exercise")[column]
+            .transform(lambda values: values.expanding().mean().shift())
+        )
+        values = historical_mean.reindex(df.index)
+        missing = df[column].isna()
+        can_impute = missing & values.notna()
+        df.loc[can_impute, column] = values[can_impute]
+        for index in df[can_impute].index:
+            df.at[index, "imputation_notes"] = append_imputation_note(
+                df.at[index, "imputation_notes"],
+                f"{column.title()} estimated from {df.at[index, 'exercise']} historical mean",
+            )
+
+    return df
+
+
+def finalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
+    df = infer_weight_basis(df)
+    df = impute_sets_reps_from_exercise_mean(df)
+    df["load_kg"] = df.apply(calculate_load_kg, axis=1)
+    df["volume_kg"] = df["sets"].fillna(0) * df["reps"].fillna(0) * df["load_kg"].fillna(0)
+    df["estimated_1rm_kg"] = df.apply(estimate_one_rep_max, axis=1)
+    df["imputation_notes"] = df["imputation_notes"].fillna("")
+    return df
+
+
 def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
     df = expand_multi_exercise_form(df.copy())
     df.columns = [COLUMN_ALIASES.get(str(column).strip().lower(), str(column).strip()) for column in df.columns]
@@ -407,9 +467,6 @@ def normalize_workouts(df: pd.DataFrame) -> pd.DataFrame:
     ]:
         df[column] = pd.to_numeric(df[column], errors="coerce")
 
-    df["load_kg"] = df.apply(calculate_load_kg, axis=1)
-    df["volume_kg"] = df["sets"].fillna(0) * df["reps"].fillna(0) * df["load_kg"].fillna(0)
-    df["estimated_1rm_kg"] = df.apply(estimate_one_rep_max, axis=1)
     return df
 
 
@@ -459,7 +516,7 @@ def load_workouts(csv_url: str | None = None) -> pd.DataFrame:
             st.sidebar.error(f"Could not load Google Sheet CSV: {exc}")
             st.sidebar.info("Make sure the sheet is shared as 'Anyone with the link can view' or published to the web.")
 
-    combined = pd.concat(frames, ignore_index=True)
+    combined = finalize_workouts(pd.concat(frames, ignore_index=True))
     dedupe_columns = ["date", "exercise", "sets", "reps", "weight_kg", "weight_basis", "notes"]
     return combined.drop_duplicates(subset=dedupe_columns, keep="last").reset_index(drop=True)
 
@@ -565,4 +622,3 @@ def load_sports() -> pd.DataFrame:
     for column in ["duration_min", "calories", "intensity", "avg_heart_rate", "max_heart_rate"]:
         sports[column] = pd.to_numeric(sports[column], errors="coerce")
     return sports.sort_values("date").reset_index(drop=True)
-

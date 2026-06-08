@@ -45,9 +45,10 @@ The gym-friendly workflow is:
 
 1. Submit one Google Form response per gym session.
 2. Fill up to 6 exercise blocks as you finish each exercise.
-3. The form writes to a linked Google Sheet.
-4. Paste the new sheet URL into the dashboard sidebar.
-5. The dashboard combines the seed CSV, legacy form CSV, and new Google Sheet.
+3. If you do more than 6 exercises, submit a second response for the same date and fill only the extra exercise blocks.
+4. The form writes to a linked Google Sheet.
+5. Paste the new sheet URL into the dashboard sidebar.
+6. The dashboard combines the seed CSV, legacy form CSV, and new Google Sheet.
 
 The app does not physically append Google Sheet rows into the CSV during normal use. Instead, every refresh reads each source, normalises them into the same schema, combines them in memory, and deduplicates obvious repeats. This keeps the old records preserved separately while letting the new form become the live source from now on.
 
@@ -66,6 +67,8 @@ The form dropdown is grouped with prefixes such as `Push / Bench press`, `Pull /
 The legacy form file is converted the same way. Older `Other exercise` entries are keyword-detected, including inclined bench, hammer curls, leg press calf raises, and stationary bike.
 
 You can also submit a later update with no exercises, for example body weight or protein later in the day. The dashboard stores that as a zero-set `Session update` row so recovery data is kept without changing muscle-volume charts.
+
+If `Weight basis` is blank, the app uses an exercise-specific default such as `per side` for bench press, `per hand` for dumbbell presses/curls, and `total` for most machines. If sets or reps are blank, the app uses that exercise's historical mean when enough past data exists. These inferred values are marked in `imputation_notes`.
 
 For Streamlit to read the sheet, share it as `Anyone with the link can view` or publish it to the web.
 
@@ -156,6 +159,8 @@ These charts are exploratory rather than causal. They help generate questions li
 - `per side`: if the exercise has a configured base load, load is base load + entered weight x 2
 - `per side`: if no base load is configured, load is entered weight x 2
 - `bodyweight`: load is the entered weight, usually 0 unless you choose to track added weight
+
+Default weight basis assumptions live in `training_app/config.py` under `DEFAULT_WEIGHT_BASIS_BY_EXERCISE`.
 
 Configured `per side` base loads live in `training_app/config.py` under `PER_SIDE_BASE_LOAD_KG`. Current defaults:
 

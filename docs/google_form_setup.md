@@ -1,6 +1,6 @@
 # Google Form Setup
 
-Use `google_form_creator.gs` to create a fresh Google Form and linked Google Sheet. The form records one gym session per submission, with up to 6 exercise blocks.
+Use `google_form_creator.gs` to create a fresh Google Form and linked Google Sheet. The form records one gym session per submission, with up to 6 exercise blocks. If a session has more than 6 exercises, submit another response for the same date and fill only the extra exercises.
 
 The form has an optional `Date` field. If you leave it blank, the dashboard uses Google Forms' automatic `Timestamp` as the workout date.
 
@@ -52,6 +52,8 @@ https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/export?format=csv&gid=SHEE
 ```
 
 The dashboard maps the Google Form column names into its internal workout schema. For the 6-exercise form, the raw sheet is wide format, and the app converts each filled exercise block into long-format per-exercise rows before calculating charts.
+
+If `Weight basis` is blank, the app uses the default for that exercise from `DEFAULT_WEIGHT_BASIS_BY_EXERCISE`. If sets or reps are blank, the app fills them with that exercise's historical mean when available and marks the row in `imputation_notes`.
 
 The new form's exercise dropdown is grouped with labels like `Push / Bench press` and `Pull / Lat pulldown` so it is easier to scan on a phone. The app strips the group prefix and stores the clean exercise name.
 

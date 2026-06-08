@@ -47,7 +47,7 @@ function createTrainingLabForm() {
 
   form.addMultipleChoiceItem()
     .setTitle('Entry type')
-    .setChoiceValues(['Workout session', 'Later update only'])
+    .setChoiceValues(['Workout session', 'Extra exercises for same day', 'Later update only'])
     .setRequired(true);
 
   form.addDateItem()
@@ -166,6 +166,19 @@ function updateExistingTrainingLabExerciseDropdowns() {
   }
 
   Logger.log('Updated exercise dropdowns: ' + form.getEditUrl());
+}
+
+function updateExistingTrainingLabEntryTypeChoices() {
+  const form = FormApp.openById('1ijRaekaR0-3D6FAvIIsMOTJJrDt3JH2wa-M6DOHHQ_M');
+  const item = form.getItems(FormApp.ItemType.MULTIPLE_CHOICE)
+    .find(candidate => candidate.getTitle() === 'Entry type');
+
+  if (item) {
+    item.asMultipleChoiceItem()
+      .setChoiceValues(['Workout session', 'Extra exercises for same day', 'Later update only']);
+  }
+
+  Logger.log('Updated entry type choices: ' + form.getEditUrl());
 }
 
 function addTimeDropdownsToExistingTrainingLabForm() {

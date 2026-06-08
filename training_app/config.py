@@ -21,6 +21,34 @@ PER_SIDE_BASE_LOAD_KG = {
     "Leg press calf raise": 47.0,
 }
 
+# Used when the form leaves Weight basis blank.
+DEFAULT_WEIGHT_BASIS_BY_EXERCISE = {
+    "Bench press": "per side",
+    "Incline bench press": "per side",
+    "Incline dumbbell press": "per hand",
+    "Flat dumbbell press": "per hand",
+    "Seated shoulder press": "per side",
+    "Seated lateral raise machine": "total",
+    "Single-arm shoulder raise": "per hand",
+    "Barbell bicep curl": "total",
+    "Dumbbell bicep curl": "per hand",
+    "Hammer curl": "per hand",
+    "Lat pulldown": "total",
+    "Seated row": "total",
+    "Tricep pulldown": "total",
+    "Overhead dumbbell tricep extension": "per hand",
+    "Pull-up": "bodyweight",
+    "Rear delt machine": "total",
+    "Reverse pec deck": "total",
+    "Leg extension": "total",
+    "Incline T-bar row": "total",
+    "Leg press": "per side",
+    "Leg press calf raise": "per side",
+    "Pectoral fly": "total",
+    "Cycling": "total",
+    "Stationary bike": "total",
+}
+
 EXERCISES = {
     "Bench press": "Chest",
     "Seated lateral raise machine": "Shoulders",
@@ -255,6 +283,7 @@ COLUMNS = [
     "sleep_hours",
     "feeling",
     "notes",
+    "imputation_notes",
 ]
 
 COLUMN_ALIASES = {

@@ -27,6 +27,7 @@ from .analytics import (
 from .config import (
     EXERCISES,
     EXERCISE_CATEGORIES,
+    DEFAULT_WEIGHT_BASIS_BY_EXERCISE,
     FORM_SCRIPT_PATH,
     LEGACY_FORM_PATH,
     MUSCLE_GROUPS,
@@ -460,6 +461,7 @@ def render_progress(df: pd.DataFrame) -> None:
                 "volume_kg",
                 "estimated_1rm_kg",
                 "rpe",
+                "imputation_notes",
                 "notes",
             ]
         ],
@@ -655,6 +657,25 @@ def render_dashboard(df: pd.DataFrame) -> None:
     avg_rpe = df["rpe"].mean()
     cols[3].metric("Avg RPE", f"{avg_rpe:.1f}/10" if not pd.isna(avg_rpe) else "-")
 
+    exercise_counts = (
+        df[df["exercise"] != "Session update"]
+        .groupby(df["date"].dt.normalize())["exercise"]
+        .nunique()
+    )
+    exercise_count_cols = st.columns(3)
+    exercise_count_cols[0].metric(
+        "Avg exercises / session",
+        "-" if exercise_counts.empty else f"{exercise_counts.mean():.1f}",
+    )
+    exercise_count_cols[1].metric(
+        "Most exercises in a day",
+        "-" if exercise_counts.empty else int(exercise_counts.max()),
+    )
+    exercise_count_cols[2].metric(
+        "Latest exercise count",
+        "-" if exercise_counts.empty else int(exercise_counts.iloc[-1]),
+    )
+
     st.divider()
 
     volume_col, muscle_col = st.columns([1.15, 1])
@@ -722,6 +743,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
                 "load_kg",
                 "volume_kg",
                 "rpe",
+                "imputation_notes",
                 "notes",
             ]
         ],
@@ -842,7 +864,9 @@ def render_setup(csv_url: str | None) -> None:
     st.code(
         "1 form submission = 1 gym session\n"
         "Fill up to 6 exercise blocks as you go\n"
+        "If you do more than 6 exercises, submit another response for the same date and fill only the extra exercises\n"
         "Exercise 1 is required; exercises 2-6 are optional\n"
+        "Blank weight basis uses the app's exercise default; blank sets/reps use that exercise's historical mean when available\n"
         "Shared optional details: duration, calories, heart rate, protein, body weight, feeling, motivation, session quality, notes",
         language="text",
     )
@@ -889,6 +913,14 @@ def render_mappings() -> None:
         )
 
     st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    st.markdown("**Default weight basis**")
+    basis_rows = [
+        {"Exercise": exercise, "Default weight basis": basis}
+        for exercise, basis in sorted(DEFAULT_WEIGHT_BASIS_BY_EXERCISE.items())
+    ]
+    st.dataframe(pd.DataFrame(basis_rows), hide_index=True, use_container_width=True)
+    st.caption("Used only when the form leaves Weight basis blank. Configure this in training_app/config.py.")
 
     st.markdown("**Per-side base load assumptions**")
     if PER_SIDE_BASE_LOAD_KG:
