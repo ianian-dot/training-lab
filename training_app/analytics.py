@@ -279,6 +279,65 @@ def exercise_progress_summary(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["Last done", "Exercise"], ascending=[False, True])
 
 
+def _next_weight_increment(weight: float, basis: str) -> float:
+    if basis in {"per side", "per hand"}:
+        return 1.0 if weight < 10 else 2.5
+    if basis == "bodyweight":
+        return 0.0
+    return 2.5 if weight < 40 else 5.0
+
+
+def _format_weight_suggestion(weight: float, basis: str) -> str:
+    if pd.isna(weight):
+        return "Try a small increase next time"
+    if basis == "bodyweight":
+        return "Try added weight or a harder variation"
+    suffix = f" {basis}" if basis else ""
+    return f"Try {weight:.1f} kg{suffix}"
+
+
+def low_rpe_progression_suggestions(
+    df: pd.DataFrame,
+    recent_entries: int = 3,
+    max_average_rpe: float = 6.0,
+) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date", "exercise", "rpe"]).copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    rows = []
+    for exercise, exercise_df in workouts.groupby("exercise"):
+        recent = exercise_df.sort_values("date").tail(recent_entries)
+        if len(recent) < recent_entries:
+            continue
+
+        average_rpe = recent["rpe"].mean()
+        if pd.isna(average_rpe) or average_rpe > max_average_rpe:
+            continue
+
+        latest = recent.iloc[-1]
+        basis = str(latest.get("weight_basis", "") or "").strip()
+        current_weight = pd.to_numeric(latest.get("weight_kg"), errors="coerce")
+        suggested_weight = current_weight + _next_weight_increment(current_weight, basis)
+
+        rows.append(
+            {
+                "Exercise": exercise,
+                "Last done": latest["date"],
+                "Recent avg RPE": average_rpe,
+                "Recent RPEs": ", ".join(f"{value:.0f}" for value in recent["rpe"].dropna()),
+                "Current logged weight": current_weight,
+                "Weight basis": basis or "-",
+                "Suggested logged weight": None if pd.isna(suggested_weight) else suggested_weight,
+                "Suggestion": _format_weight_suggestion(suggested_weight, basis),
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values(["Recent avg RPE", "Last done"], ascending=[True, False])
+
+
 def calendar_matrix(df: pd.DataFrame) -> pd.DataFrame:
     days = session_days(df)
     if days.empty:

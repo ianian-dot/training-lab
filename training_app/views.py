@@ -18,6 +18,7 @@ from .analytics import (
     format_current_target,
     format_set_target,
     latest_body_metrics,
+    low_rpe_progression_suggestions,
     monthly_training_summary,
     protein_performance_summary,
     rest_day_summary,
@@ -715,6 +716,46 @@ def render_dashboard(df: pd.DataFrame) -> None:
         "Latest exercise count",
         "-" if exercise_counts.empty else int(exercise_counts.iloc[-1]),
     )
+
+    progression = low_rpe_progression_suggestions(df)
+    st.markdown("**Too easy recently**")
+    if progression.empty:
+        st.info(
+            "No low-RPE progression candidates yet. Add RPE regularly and this will flag exercises "
+            "whose last 3 RPEs average 6 or lower."
+        )
+    else:
+        display_progression = progression.copy()
+        display_progression["Last done"] = pd.to_datetime(display_progression["Last done"]).dt.strftime(
+            "%b %d, %Y"
+        )
+        display_progression["Recent avg RPE"] = display_progression["Recent avg RPE"].round(1)
+        display_progression["Current logged weight"] = display_progression["Current logged weight"].map(
+            lambda value: "-" if pd.isna(value) else f"{value:.1f} kg"
+        )
+        display_progression["Suggested logged weight"] = display_progression["Suggested logged weight"].map(
+            lambda value: "-" if pd.isna(value) else f"{value:.1f} kg"
+        )
+        st.dataframe(
+            display_progression[
+                [
+                    "Exercise",
+                    "Last done",
+                    "Recent avg RPE",
+                    "Recent RPEs",
+                    "Current logged weight",
+                    "Weight basis",
+                    "Suggested logged weight",
+                    "Suggestion",
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.caption(
+            "Triggered when the last 3 logged RPEs for an exercise average 6 or lower. "
+            "Suggestions are conservative next-session weight bumps."
+        )
 
     st.divider()
 
