@@ -1,6 +1,6 @@
 # Training Lab
 
-**【View the app on streamlit](https://ianian-dot-training-lab-app-yl6nrp.streamlit.app)
+[View the app on streamlit](https://ianian-dot-training-lab-app-yl6nrp.streamlit.app)
 
 A personal Streamlit dashboard for logging gym sessions and tracking strength, volume, and consistency.
 
