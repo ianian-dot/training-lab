@@ -15,6 +15,7 @@ from .analytics import (
     daily_efficiency,
     daily_recovery_performance,
     daily_session_insights,
+    day_type_session_summary,
     exercise_frequency_summary,
     exercise_progress_summary,
     format_current_target,
@@ -25,6 +26,7 @@ from .analytics import (
     protein_performance_summary,
     rest_day_summary,
     session_days,
+    singapore_public_holiday_table,
     time_of_day_session_summary,
     weekday_session_summary,
     weekly_session_counts,
@@ -640,6 +642,7 @@ def render_dashboard(df: pd.DataFrame) -> None:
     daily_patterns = daily_session_insights(df)
     weekday_patterns = weekday_session_summary(df)
     time_patterns = time_of_day_session_summary(df)
+    day_type_patterns = day_type_session_summary(df)
     exercise_frequency = exercise_frequency_summary(df)
 
     def best_group(summary: pd.DataFrame, label_column: str, metric_column: str) -> tuple[str, float | None]:
@@ -755,11 +758,81 @@ def render_dashboard(df: pd.DataFrame) -> None:
                 use_container_width=True,
             )
 
+    st.markdown("**Public holiday vs weekend vs weekday**")
+    if day_type_patterns.empty or day_type_patterns[selected_pattern_column].dropna().empty:
+        st.info("Not enough data to compare public holidays, weekends, and weekdays yet.")
+    else:
+        day_type_cols = st.columns(4)
+        ph_row = day_type_patterns[day_type_patterns["day_type"] == "Public holiday"]
+        weekend_row = day_type_patterns[day_type_patterns["day_type"] == "Weekend"]
+        weekday_row = day_type_patterns[day_type_patterns["day_type"] == "Weekday"]
+
+        def day_type_metric(row: pd.DataFrame, column: str, suffix: str = "", precision: int = 1) -> str:
+            if row.empty:
+                return "-"
+            value = row.iloc[0].get(column)
+            if pd.isna(value):
+                return "-"
+            return f"{value:.{precision}f}{suffix}"
+
+        day_type_cols[0].metric("PH sessions", day_type_metric(ph_row, "sessions", precision=0))
+        day_type_cols[1].metric("Weekend sessions", day_type_metric(weekend_row, "sessions", precision=0))
+        day_type_cols[2].metric("Weekday sessions", day_type_metric(weekday_row, "sessions", precision=0))
+        best_day_type_label, best_day_type_value = best_group(
+            day_type_patterns,
+            "day_type",
+            selected_pattern_column,
+        )
+        day_type_cols[3].metric(
+            "Best day type",
+            best_day_type_label,
+            metric_delta(best_day_type_value, precision=0 if selected_pattern_metric == "Sessions" else 1),
+        )
+        st.bar_chart(
+            day_type_patterns,
+            x="day_type",
+            y=selected_pattern_column,
+            use_container_width=True,
+        )
+        day_type_table = day_type_patterns.copy()
+        st.dataframe(
+            day_type_table[
+                [
+                    "day_type",
+                    "sessions",
+                    "avg_calories",
+                    "avg_productivity",
+                    "avg_session_quality",
+                    "avg_volume_kg",
+                    "avg_duration_min",
+                    "avg_volume_per_min",
+                    "avg_sets_per_min",
+                    "avg_exercise_count",
+                ]
+            ].round(1),
+            hide_index=True,
+            use_container_width=True,
+        )
+
+    with st.expander("Singapore public holidays used"):
+        holidays = singapore_public_holiday_table()
+        holiday_years = sorted(pd.to_datetime(df["date"]).dt.year.dropna().unique())
+        if holiday_years:
+            holidays = holidays[holidays["date"].dt.year.isin(holiday_years)]
+        holiday_display = holidays.copy()
+        holiday_display["date"] = holiday_display["date"].dt.strftime("%Y-%m-%d")
+        st.dataframe(holiday_display, hide_index=True, use_container_width=True)
+        st.caption(
+            "Source: Singapore Ministry of Manpower public holiday listings. Substitute Mondays are included."
+        )
+
     if not daily_patterns.empty:
         pattern_table = daily_patterns[
             [
                 "day",
                 "weekday",
+                "day_type",
+                "holiday",
                 "time_of_day",
                 "calories",
                 "duration_min",

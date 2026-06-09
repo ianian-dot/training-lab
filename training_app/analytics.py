@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .config import ALL_TRACKED_MUSCLES, MUSCLE_TARGETS
+from .config import ALL_TRACKED_MUSCLES, MUSCLE_TARGETS, SINGAPORE_PUBLIC_HOLIDAYS
 
 
 WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 TIME_BUCKET_ORDER = ["Morning", "Afternoon", "Evening", "Night", "Unknown"]
+DAY_TYPE_ORDER = ["Public holiday", "Weekend", "Weekday"]
 
 
 def workout_rows(df: pd.DataFrame) -> pd.DataFrame:
@@ -242,6 +243,27 @@ def _time_of_day(hour: float | None) -> str:
     return "Unknown"
 
 
+def singapore_public_holiday_table() -> pd.DataFrame:
+    holidays = pd.DataFrame(SINGAPORE_PUBLIC_HOLIDAYS)
+    holidays["date"] = pd.to_datetime(holidays["date"])
+    holidays["weekday"] = holidays["date"].dt.day_name()
+    return holidays.sort_values("date").reset_index(drop=True)
+
+
+def _holiday_lookup() -> dict[pd.Timestamp, str]:
+    holidays = singapore_public_holiday_table()
+    return dict(zip(holidays["date"].dt.normalize(), holidays["holiday"]))
+
+
+def _day_type(day: pd.Timestamp, holidays: dict[pd.Timestamp, str]) -> str:
+    normalized = pd.to_datetime(day).normalize()
+    if normalized in holidays:
+        return "Public holiday"
+    if normalized.weekday() >= 5:
+        return "Weekend"
+    return "Weekday"
+
+
 def daily_session_insights(df: pd.DataFrame) -> pd.DataFrame:
     workouts = workout_rows(df).dropna(subset=["date"]).copy()
     if workouts.empty:
@@ -277,6 +299,12 @@ def daily_session_insights(df: pd.DataFrame) -> pd.DataFrame:
     daily["time_bucket_order"] = daily["time_of_day"].map(
         {bucket: index for index, bucket in enumerate(TIME_BUCKET_ORDER)}
     )
+    holiday_lookup = _holiday_lookup()
+    daily["day_type"] = daily["day"].apply(lambda day: _day_type(day, holiday_lookup))
+    daily["holiday"] = daily["day"].dt.normalize().map(holiday_lookup).fillna("")
+    daily["day_type_order"] = daily["day_type"].map(
+        {day_type: index for index, day_type in enumerate(DAY_TYPE_ORDER)}
+    )
     return daily
 
 
@@ -310,6 +338,15 @@ def weekday_session_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 def time_of_day_session_summary(df: pd.DataFrame) -> pd.DataFrame:
     return _summarize_sessions(daily_session_insights(df), "time_of_day", "time_bucket_order")
+
+
+def day_type_session_summary(df: pd.DataFrame) -> pd.DataFrame:
+    summary = _summarize_sessions(daily_session_insights(df), "day_type", "day_type_order")
+    if summary.empty:
+        return summary
+
+    full = pd.DataFrame({"day_type": DAY_TYPE_ORDER})
+    return full.merge(summary, on="day_type", how="left").fillna({"sessions": 0})
 
 
 def exercise_frequency_summary(df: pd.DataFrame) -> pd.DataFrame:
