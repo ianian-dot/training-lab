@@ -14,6 +14,8 @@ from .analytics import (
     current_month_summary,
     daily_efficiency,
     daily_recovery_performance,
+    daily_session_insights,
+    exercise_frequency_summary,
     exercise_progress_summary,
     format_current_target,
     format_set_target,
@@ -23,6 +25,8 @@ from .analytics import (
     protein_performance_summary,
     rest_day_summary,
     session_days,
+    time_of_day_session_summary,
+    weekday_session_summary,
     weekly_session_counts,
 )
 from .config import (
@@ -630,6 +634,178 @@ def render_dashboard(df: pd.DataFrame) -> None:
         st.caption(
             "Indexes are normalized 0-100 separately. Use the metric cards for raw kg/min and sets/min; "
             "use this chart only to compare direction over time."
+        )
+
+    st.markdown("**Pattern insights**")
+    daily_patterns = daily_session_insights(df)
+    weekday_patterns = weekday_session_summary(df)
+    time_patterns = time_of_day_session_summary(df)
+    exercise_frequency = exercise_frequency_summary(df)
+
+    def best_group(summary: pd.DataFrame, label_column: str, metric_column: str) -> tuple[str, float | None]:
+        if summary.empty or metric_column not in summary.columns:
+            return "-", None
+        usable = summary.dropna(subset=[metric_column])
+        if usable.empty:
+            return "-", None
+        best = usable.sort_values(metric_column, ascending=False).iloc[0]
+        return str(best[label_column]), float(best[metric_column])
+
+    def metric_delta(value: float | None, suffix: str = "", precision: int = 1) -> str:
+        if value is None or pd.isna(value):
+            return "-"
+        return f"{value:.{precision}f}{suffix}"
+
+    insight_cols = st.columns(5)
+    day_label, day_value = best_group(weekday_patterns, "weekday", "sessions")
+    calorie_label, calorie_value = best_group(weekday_patterns, "weekday", "avg_calories")
+    productivity_label, productivity_value = best_group(weekday_patterns, "weekday", "avg_productivity")
+    volume_label, volume_value = best_group(weekday_patterns, "weekday", "avg_volume_kg")
+    efficiency_label, efficiency_value = best_group(weekday_patterns, "weekday", "avg_volume_per_min")
+    insight_cols[0].metric("Most common day", day_label, metric_delta(day_value, " sessions", precision=0))
+    insight_cols[1].metric("Highest avg calories", calorie_label, metric_delta(calorie_value, " kcal", precision=0))
+    insight_cols[2].metric("Best productivity", productivity_label, metric_delta(productivity_value, "/10"))
+    insight_cols[3].metric("Most volume", volume_label, metric_delta(volume_value, " kg", precision=0))
+    insight_cols[4].metric("Best volume / min", efficiency_label, metric_delta(efficiency_value, " kg/min"))
+
+    known_time_patterns = (
+        time_patterns[time_patterns["time_of_day"] != "Unknown"]
+        if not time_patterns.empty
+        else time_patterns
+    )
+    time_insight_cols = st.columns(5)
+    time_label, time_value = best_group(known_time_patterns, "time_of_day", "sessions")
+    time_calorie_label, time_calorie_value = best_group(known_time_patterns, "time_of_day", "avg_calories")
+    time_productivity_label, time_productivity_value = best_group(
+        known_time_patterns,
+        "time_of_day",
+        "avg_productivity",
+    )
+    time_volume_label, time_volume_value = best_group(known_time_patterns, "time_of_day", "avg_volume_kg")
+    time_efficiency_label, time_efficiency_value = best_group(
+        known_time_patterns,
+        "time_of_day",
+        "avg_volume_per_min",
+    )
+    time_insight_cols[0].metric("Most common time", time_label, metric_delta(time_value, " sessions", precision=0))
+    time_insight_cols[1].metric(
+        "Highest calorie time",
+        time_calorie_label,
+        metric_delta(time_calorie_value, " kcal", precision=0),
+    )
+    time_insight_cols[2].metric(
+        "Best productivity time",
+        time_productivity_label,
+        metric_delta(time_productivity_value, "/10"),
+    )
+    time_insight_cols[3].metric(
+        "Most volume time",
+        time_volume_label,
+        metric_delta(time_volume_value, " kg", precision=0),
+    )
+    time_insight_cols[4].metric(
+        "Best efficiency time",
+        time_efficiency_label,
+        metric_delta(time_efficiency_value, " kg/min"),
+    )
+
+    pattern_metric_options = {
+        "Sessions": "sessions",
+        "Calories": "avg_calories",
+        "Productivity score": "avg_productivity",
+        "Session quality": "avg_session_quality",
+        "Energy": "avg_energy",
+        "Motivation": "avg_motivation",
+        "Volume": "avg_volume_kg",
+        "Duration": "avg_duration_min",
+        "Volume / min": "avg_volume_per_min",
+        "Sets / min": "avg_sets_per_min",
+        "Exercises / session": "avg_exercise_count",
+    }
+    selected_pattern_metric = st.selectbox(
+        "Pattern metric",
+        list(pattern_metric_options),
+        index=0,
+        help="Use this to compare your training patterns by weekday and time of day.",
+    )
+    selected_pattern_column = pattern_metric_options[selected_pattern_metric]
+
+    weekday_col, time_col = st.columns(2)
+    with weekday_col:
+        st.markdown("**By weekday**")
+        if weekday_patterns.empty or weekday_patterns[selected_pattern_column].dropna().empty:
+            st.info("Not enough data for this weekday metric yet.")
+        else:
+            st.bar_chart(
+                weekday_patterns,
+                x="weekday",
+                y=selected_pattern_column,
+                use_container_width=True,
+            )
+
+    with time_col:
+        st.markdown("**By time of day**")
+        if time_patterns.empty or time_patterns[selected_pattern_column].dropna().empty:
+            st.info("Not enough time-of-day data for this metric yet.")
+        else:
+            st.bar_chart(
+                time_patterns,
+                x="time_of_day",
+                y=selected_pattern_column,
+                use_container_width=True,
+            )
+
+    if not daily_patterns.empty:
+        pattern_table = daily_patterns[
+            [
+                "day",
+                "weekday",
+                "time_of_day",
+                "calories",
+                "duration_min",
+                "exercise_count",
+                "total_volume_kg",
+                "volume_per_min",
+                "sets_per_min",
+                "productivity_score",
+                "session_quality",
+            ]
+        ].copy()
+        pattern_table["day"] = pattern_table["day"].dt.strftime("%Y-%m-%d")
+        st.dataframe(pattern_table.round(1), hide_index=True, use_container_width=True)
+
+    if not exercise_frequency.empty:
+        st.markdown("**Exercise frequency**")
+        most_exercise = exercise_frequency.iloc[0]
+        least_exercise = exercise_frequency.sort_values(["sessions", "entries", "last_done"]).iloc[0]
+        frequency_cols = st.columns(2)
+        frequency_cols[0].metric(
+            "Most frequent exercise",
+            most_exercise["exercise"],
+            f"{int(most_exercise['sessions'])} sessions",
+        )
+        frequency_cols[1].metric(
+            "Least frequent exercise",
+            least_exercise["exercise"],
+            f"{int(least_exercise['sessions'])} sessions",
+        )
+        frequency_table = exercise_frequency.copy()
+        frequency_table["last_done"] = pd.to_datetime(frequency_table["last_done"]).dt.strftime("%Y-%m-%d")
+        st.dataframe(
+            frequency_table[
+                [
+                    "exercise",
+                    "sessions",
+                    "entries",
+                    "last_done",
+                    "avg_rpe",
+                    "avg_load_kg",
+                    "best_load_kg",
+                    "total_volume_kg",
+                ]
+            ].round(1),
+            hide_index=True,
+            use_container_width=True,
         )
 
     monthly = monthly_training_summary(df)

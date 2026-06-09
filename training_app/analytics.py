@@ -5,6 +5,10 @@ import pandas as pd
 from .config import ALL_TRACKED_MUSCLES, MUSCLE_TARGETS
 
 
+WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+TIME_BUCKET_ORDER = ["Morning", "Afternoon", "Evening", "Night", "Unknown"]
+
+
 def workout_rows(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
@@ -207,6 +211,127 @@ def daily_efficiency(df: pd.DataFrame) -> pd.DataFrame:
     daily["sets_per_min"] = daily["total_sets"] / usable_duration
     daily["exercises_per_hour"] = daily["exercise_count"] / usable_duration * 60
     return daily
+
+
+def _first_filled(values: pd.Series) -> object:
+    filled = values.dropna()
+    filled = filled[filled.astype(str).str.strip() != ""]
+    return None if filled.empty else filled.iloc[0]
+
+
+def _parse_start_hour(value: object) -> float | None:
+    if pd.isna(value) or str(value).strip() == "":
+        return None
+    parsed = pd.to_datetime(str(value), errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return float(parsed.hour + parsed.minute / 60)
+
+
+def _time_of_day(hour: float | None) -> str:
+    if hour is None or pd.isna(hour):
+        return "Unknown"
+    if 8 <= hour < 12:
+        return "Morning"
+    if 12 <= hour < 17:
+        return "Afternoon"
+    if 17 <= hour < 21:
+        return "Evening"
+    if 21 <= hour < 24:
+        return "Night"
+    return "Unknown"
+
+
+def daily_session_insights(df: pd.DataFrame) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date"]).copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    workouts["day"] = pd.to_datetime(workouts["date"]).dt.normalize()
+    daily = (
+        workouts.groupby("day", as_index=False)
+        .agg(
+            start_time=("start_time", _first_filled),
+            calories=("calories", "max"),
+            duration_min=("duration_min", "max"),
+            total_sets=("sets", "sum"),
+            total_volume_kg=("volume_kg", "sum"),
+            exercise_count=("exercise", "nunique"),
+            avg_rpe=("rpe", "mean"),
+            energy=("energy", "max"),
+            motivation=("motivation", "max"),
+            session_quality=("session_quality", "max"),
+        )
+        .sort_values("day")
+    )
+
+    usable_duration = daily["duration_min"].where(daily["duration_min"] > 0)
+    daily["volume_per_min"] = daily["total_volume_kg"] / usable_duration
+    daily["sets_per_min"] = daily["total_sets"] / usable_duration
+    daily["exercises_per_hour"] = daily["exercise_count"] / usable_duration * 60
+    daily["productivity_score"] = daily[["energy", "motivation", "session_quality"]].mean(axis=1)
+    daily["weekday"] = daily["day"].dt.day_name()
+    daily["weekday_order"] = daily["weekday"].map({day: index for index, day in enumerate(WEEKDAY_ORDER)})
+    daily["start_hour"] = daily["start_time"].apply(_parse_start_hour)
+    daily["time_of_day"] = daily["start_hour"].apply(_time_of_day)
+    daily["time_bucket_order"] = daily["time_of_day"].map(
+        {bucket: index for index, bucket in enumerate(TIME_BUCKET_ORDER)}
+    )
+    return daily
+
+
+def _summarize_sessions(daily: pd.DataFrame, group_column: str, order_column: str) -> pd.DataFrame:
+    if daily.empty:
+        return pd.DataFrame()
+
+    summary = (
+        daily.groupby([group_column, order_column], dropna=False, as_index=False)
+        .agg(
+            sessions=("day", "count"),
+            avg_calories=("calories", "mean"),
+            avg_productivity=("productivity_score", "mean"),
+            avg_session_quality=("session_quality", "mean"),
+            avg_energy=("energy", "mean"),
+            avg_motivation=("motivation", "mean"),
+            avg_volume_kg=("total_volume_kg", "mean"),
+            avg_duration_min=("duration_min", "mean"),
+            avg_volume_per_min=("volume_per_min", "mean"),
+            avg_sets_per_min=("sets_per_min", "mean"),
+            avg_exercise_count=("exercise_count", "mean"),
+        )
+        .sort_values(order_column)
+    )
+    return summary.drop(columns=[order_column])
+
+
+def weekday_session_summary(df: pd.DataFrame) -> pd.DataFrame:
+    return _summarize_sessions(daily_session_insights(df), "weekday", "weekday_order")
+
+
+def time_of_day_session_summary(df: pd.DataFrame) -> pd.DataFrame:
+    return _summarize_sessions(daily_session_insights(df), "time_of_day", "time_bucket_order")
+
+
+def exercise_frequency_summary(df: pd.DataFrame) -> pd.DataFrame:
+    workouts = workout_rows(df).dropna(subset=["date", "exercise"]).copy()
+    if workouts.empty:
+        return pd.DataFrame()
+
+    workouts["day"] = pd.to_datetime(workouts["date"]).dt.normalize()
+    summary = (
+        workouts.groupby("exercise", as_index=False)
+        .agg(
+            entries=("exercise", "count"),
+            sessions=("day", "nunique"),
+            last_done=("date", "max"),
+            avg_rpe=("rpe", "mean"),
+            avg_load_kg=("load_kg", "mean"),
+            best_load_kg=("load_kg", "max"),
+            total_volume_kg=("volume_kg", "sum"),
+        )
+        .sort_values(["sessions", "entries", "last_done"], ascending=[False, False, False])
+    )
+    return summary
 
 
 def monthly_training_summary(df: pd.DataFrame) -> pd.DataFrame:
