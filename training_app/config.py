@@ -8,40 +8,10 @@ DATA_DIR = APP_DIR / "data"
 WORKOUTS_PATH = DATA_DIR / "workouts.csv"
 SPORTS_PATH = DATA_DIR / "sports.csv"
 LEGACY_FORM_PATH = DATA_DIR / "legacy_google_form.csv"
+PUBLIC_HOLIDAYS_PATH = DATA_DIR / "singapore_public_holidays.csv"
 FORM_SCRIPT_PATH = APP_DIR / "google_form_creator.gs"
 SPORTS_FORM_SCRIPT_PATH = APP_DIR / "sports_form_creator.gs"
 DEFAULT_GOOGLE_SHEET_URL = os.environ.get("TRAINING_LAB_GOOGLE_SHEET_URL", "")
-
-# Singapore public holidays from MOM. Substitute Mondays are included because
-# they behave like public holidays for planning/training context.
-SINGAPORE_PUBLIC_HOLIDAYS = [
-    {"date": "2025-01-01", "holiday": "New Year's Day"},
-    {"date": "2025-01-29", "holiday": "Chinese New Year"},
-    {"date": "2025-01-30", "holiday": "Chinese New Year"},
-    {"date": "2025-03-31", "holiday": "Hari Raya Puasa"},
-    {"date": "2025-04-18", "holiday": "Good Friday"},
-    {"date": "2025-05-01", "holiday": "Labour Day"},
-    {"date": "2025-05-03", "holiday": "Polling Day"},
-    {"date": "2025-05-12", "holiday": "Vesak Day"},
-    {"date": "2025-06-07", "holiday": "Hari Raya Haji"},
-    {"date": "2025-08-09", "holiday": "National Day"},
-    {"date": "2025-10-20", "holiday": "Deepavali"},
-    {"date": "2025-12-25", "holiday": "Christmas Day"},
-    {"date": "2026-01-01", "holiday": "New Year's Day"},
-    {"date": "2026-02-17", "holiday": "Chinese New Year"},
-    {"date": "2026-02-18", "holiday": "Chinese New Year"},
-    {"date": "2026-03-21", "holiday": "Hari Raya Puasa"},
-    {"date": "2026-04-03", "holiday": "Good Friday"},
-    {"date": "2026-05-01", "holiday": "Labour Day"},
-    {"date": "2026-05-27", "holiday": "Hari Raya Haji"},
-    {"date": "2026-05-31", "holiday": "Vesak Day"},
-    {"date": "2026-06-01", "holiday": "Vesak Day substitute"},
-    {"date": "2026-08-09", "holiday": "National Day"},
-    {"date": "2026-08-10", "holiday": "National Day substitute"},
-    {"date": "2026-11-08", "holiday": "Deepavali"},
-    {"date": "2026-11-09", "holiday": "Deepavali substitute"},
-    {"date": "2026-12-25", "holiday": "Christmas Day"},
-]
 
 # Extra base load added when a machine/barbell lift is logged as "per side".
 # Edit this one mapping when a machine's starting sled/bar weight is different.

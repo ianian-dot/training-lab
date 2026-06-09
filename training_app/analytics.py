@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .config import ALL_TRACKED_MUSCLES, MUSCLE_TARGETS, SINGAPORE_PUBLIC_HOLIDAYS
+from .config import ALL_TRACKED_MUSCLES, MUSCLE_TARGETS, PUBLIC_HOLIDAYS_PATH
 
 
 WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -244,9 +244,20 @@ def _time_of_day(hour: float | None) -> str:
 
 
 def singapore_public_holiday_table() -> pd.DataFrame:
-    holidays = pd.DataFrame(SINGAPORE_PUBLIC_HOLIDAYS)
+    columns = ["date", "holiday", "weekday", "is_substitute", "source_url"]
+    if not PUBLIC_HOLIDAYS_PATH.exists():
+        return pd.DataFrame(columns=columns)
+
+    holidays = pd.read_csv(PUBLIC_HOLIDAYS_PATH)
+    missing_columns = set(columns) - set(holidays.columns)
+    if missing_columns:
+        raise ValueError(
+            f"Public holiday dataset is missing columns: {', '.join(sorted(missing_columns))}"
+        )
+
+    holidays = holidays[columns].copy()
     holidays["date"] = pd.to_datetime(holidays["date"])
-    holidays["weekday"] = holidays["date"].dt.day_name()
+    holidays["weekday"] = holidays["weekday"].fillna(holidays["date"].dt.day_name())
     return holidays.sort_values("date").reset_index(drop=True)
 
 
